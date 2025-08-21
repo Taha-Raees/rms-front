@@ -1,0 +1,16 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/lib/generated/prisma
+
+# Next.js build output
+.next/
+
+# Tauri build output
+src-tauri/target/
+src-tauri/.cargo/
+
+# Capacitor native platforms
+android/
+ios/

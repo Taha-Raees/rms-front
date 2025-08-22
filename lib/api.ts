@@ -19,6 +19,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 async function handleResponse<T>(response: Response): Promise<T> {
   const data = await response.json();
   if (!response.ok) {
+    console.error('API Error:', data.error || 'API request failed', 'Status:', response.status, 'Headers:', Object.fromEntries(response.headers.entries()));
     throw new Error(data.error || 'API request failed');
   }
   return data;
@@ -172,13 +173,12 @@ export const inventoryApi = {
 
 // Analytics API
 export const analyticsApi = {
-  getDashboardData: async (storeId?: string) => {
-    const url = new URL(`${API_BASE_URL}/analytics/dashboard`);
-    if (storeId) {
-      url.searchParams.append('storeId', storeId);
-    }
-    const response = await fetch(url.toString(), {
+  getDashboardData: async () => {
+    const response = await fetch(`${API_BASE_URL}/analytics/dashboard`, {
       credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
     return handleResponse<ApiResponse<any>>(response);
   },

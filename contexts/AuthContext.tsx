@@ -90,22 +90,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
+      console.log('Checking authentication...');
       const result = await authApi.getMe();
+      console.log('Auth check result:', result);
       
       if (result.success && result.data) {
         const userData = result.data;
+        console.log('User data received:', userData);
         // Fetch store data separately
         let storeData = null;
         if (userData.storeId) {
           try {
+            console.log('Fetching store data for storeId:', userData.storeId);
             const storeResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/store`, {
               credentials: 'include',
             });
+            console.log('Store response status:', storeResponse.status);
+            console.log('Store response headers:', Object.fromEntries(storeResponse.headers.entries()));
+            
             if (storeResponse.ok) {
               const storeResult = await storeResponse.json();
+              console.log('Store data result:', storeResult);
               if (storeResult.success && storeResult.data) {
                 storeData = storeResult.data;
               }
+            } else {
+              console.error('Failed to fetch store data:', storeResponse.status);
             }
           } catch (storeError) {
             console.error('Failed to fetch store data:', storeError);
@@ -119,12 +129,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               id: userData.id,
               email: userData.email,
               role: userData.role,
-              storeId: userData.storeId,
+              storeId: userData.storeId || '',
             },
             store: storeData
           }
         });
       } else {
+        console.log('Auth check failed - clearing auth');
         dispatch({ type: 'CLEAR_AUTH' });
       }
     } catch (error) {
@@ -138,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       const result = await authApi.login(email, password);
       
-      if (result.success) {
+      if (result.success && result.data) {
         dispatch({
           type: 'SET_AUTH_DATA',
           payload: {
@@ -146,9 +157,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               id: result.data.user.id,
               email: result.data.user.email,
               role: result.data.user.role,
-              storeId: result.data.user.storeId,
+              storeId: result.data.user.storeId || '',
             },
-            store: result.data.store
+            store: result.data.store || null
           }
         });
         return { success: true };

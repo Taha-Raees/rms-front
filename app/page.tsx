@@ -22,30 +22,6 @@ export default function DashboardPage() {
   const { state } = useApp();
   const { store } = state;
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authState.isAuthenticated && !authState.isLoading) {
-      router.push('/login');
-    }
-  }, [authState.isAuthenticated, authState.isLoading, router]);
-
-  // Show loading state while checking auth
-  if (authState.isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show nothing if not authenticated (redirect will happen)
-  if (!authState.isAuthenticated) {
-    return null;
-  }
-
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [topSellingProducts, setTopSellingProducts] = useState<Product[]>([]);
   const [inventoryAlerts, setInventoryAlerts] = useState<Product[]>([]);
@@ -57,10 +33,6 @@ export default function DashboardPage() {
     salesTrendPositive: true
   });
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -110,6 +82,34 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authState.isAuthenticated && !authState.isLoading) {
+      router.push('/login');
+    }
+  }, [authState.isAuthenticated, authState.isLoading, router]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  // Show loading state while checking auth
+  if (authState.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show nothing if not authenticated (redirect will happen)
+  if (!authState.isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">

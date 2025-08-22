@@ -50,11 +50,8 @@ export default function AnalyticsPage() {
     try {
       setLoading(true);
       
-      // Get storeId from auth context
-      const storeId = authState.store?.id;
-      
       // Fetch analytics data from API
-      const result = await analyticsApi.getDashboardData(storeId);
+      const result = await analyticsApi.getDashboardData();
       
       if (result.success && result.data) {
         const data = result.data;

@@ -18,6 +18,7 @@ export interface Product {
   variants?: ProductVariant[];
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 export interface ProductVariant {
@@ -112,6 +113,7 @@ export interface User {
   id: string;
   email: string;
   password: string;
+  name?: string;
   storeId: string;
   role: 'owner' | 'manager' | 'cashier';
   isActive: boolean;
@@ -146,4 +148,80 @@ export interface AuthResponse {
   };
   store: Store;
   message: string;
+}
+
+// Stock Management Types
+export interface StockMovement {
+  id: string;
+  productId: string;
+  product?: Product;
+  variantId?: string;
+  variant?: ProductVariant;
+  storeId: string;
+  quantity: number;
+  reason: 'SALE' | 'RETURN' | 'DAMAGE' | 'THEFT' | 'CORRECTION' | 'RECEIPT' | 'TRANSFER' | 'RESERVATION' | 'RESERVATION_RELEASE';
+  referenceType?: string;
+  referenceId?: string;
+  notes?: string;
+  userId?: string;
+  user?: User;
+  createdAt: Date;
+}
+
+export interface StockReservation {
+  id: string;
+  orderId: string;
+  order?: Order;
+  productId: string;
+  product?: Product;
+  variantId?: string;
+  variant?: ProductVariant;
+  quantity: number;
+  reservedAt: Date;
+  expiresAt: Date;
+  status: 'ACTIVE' | 'EXPIRED' | 'RELEASED' | 'CONFIRMED';
+  storeId: string;
+}
+
+export interface StockAdjustmentReason {
+  value: string;
+  label: string;
+  description: string;
+  color: string;
+}
+
+// Audit Types
+export interface AuditLog {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  userId?: string;
+  user?: User;
+  storeId?: string;
+  store?: Store;
+  oldValues?: any;
+  newValues?: any;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: Date;
+}
+
+export interface AuditFilterParams {
+  limit?: number;
+  offset?: number;
+  entityType?: string;
+  action?: string;
+  userId?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export interface AuditExportParams {
+  format?: 'csv' | 'json';
+  entityType?: string;
+  action?: string;
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
 }

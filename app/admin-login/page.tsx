@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Shield, Lock, Mail } from 'lucide-react';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -18,9 +17,6 @@ export default function AdminLoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Remove the authentication check from login page to prevent redirect loops
-  // The admin layout will handle authentication checks for protected routes
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -36,39 +32,27 @@ export default function AdminLoginPage() {
     setError('');
 
     try {
-      console.log('Attempting login with:', formData);
-      console.log('API Base URL:', API_BASE_URL);
-      
-      const response = await fetch(`${API_BASE_URL}/auth/admin-login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/auth/admin-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
         credentials: 'include',
+        body: JSON.stringify(formData),
       });
 
-      console.log('Login response status:', response.status);
-      console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
-      
       const result = await response.json();
-      console.log('Login response body:', result);
 
       if (result.success) {
-        // Token is now in httpOnly cookie, no need to store in localStorage
-        console.log('Login successful, redirecting to admin dashboard');
-        
-        // Add a small delay to ensure the cookie is set
-        setTimeout(() => {
-          router.push('/admin-dashboard');
-        }, 500);
+        // Redirect to admin dashboard
+        router.push('/admin-dashboard');
+        router.refresh();
       } else {
         setError(result.error || 'Login failed');
-        console.error('Login failed:', result.error);
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('An error occurred during login: ' + (error as Error).message);
+    } catch (error: any) {
+      console.error('Admin login error:', error);
+      setError(error.message || 'An error occurred during login');
     } finally {
       setIsLoading(false);
     }

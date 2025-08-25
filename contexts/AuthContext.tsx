@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { Store, User } from '@/lib/types';
 
@@ -69,6 +69,7 @@ interface AuthContextType {
   dispatch: React.Dispatch<AuthAction>;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  refreshAuth: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,10 +77,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     // Don't check auth on public pages
-    const publicPages = ['/login', '/admin-login', '/admin-dashboard'];
+    const publicPages = ['/login', '/admin-login'];
     if (publicPages.includes(pathname) || pathname.startsWith('/admin-dashboard')) {
       dispatch({ type: 'SET_LOADING', payload: false });
       return;
@@ -144,6 +146,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshAuth = async (): Promise<boolean> => {
+    try {
+      // Try to refresh the token
+      const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (refreshResponse.ok) {
+        // If refresh succeeds, re-check auth
+        await checkAuth();
+        return true;
+      } else {
+        // If refresh fails, clear auth and redirect to login
+        dispatch({ type: 'CLEAR_AUTH' });
+        if (!pathname.startsWith('/login') && !pathname.startsWith('/admin-login')) {
+          router.push('/login');
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      dispatch({ type: 'CLEAR_AUTH' });
+      if (!pathname.startsWith('/login') && !pathname.startsWith('/admin-login')) {
+        router.push('/login');
+      }
+      return false;
+    }
+  };
+
   const login = async (email: string, password: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -190,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ state, dispatch, login, logout }}>
+    <AuthContext.Provider value={{ state, dispatch, login, logout, refreshAuth }}>
       {children}
     </AuthContext.Provider>
   );

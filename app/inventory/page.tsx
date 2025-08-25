@@ -11,8 +11,9 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { DataTable } from '@/components/ui/data-table';
 import { MetricCard } from '@/components/ui/metric-card';
 import { useToast } from '@/hooks/use-toast';
-import { productsApi } from '@/lib/api';
+import { productsApi, inventoryApi } from '@/lib/api';
 import { Product, ProductVariant } from '@/lib/types';
+import { StockAdjustmentDialog } from '@/components/inventory/StockAdjustmentDialog';
 
 import {
   Dialog,
@@ -33,6 +34,7 @@ import {
 // Interfaces for form data
 interface ProductFormData {
   name: string;
+  description: string;
   brand: string;
   category: string;
   type: 'prepackaged' | 'loose_weight';
@@ -42,6 +44,7 @@ interface ProductFormData {
   lowStockThreshold: number;
   barcode?: string;
   variants?: ProductVariant[];
+  isActive: boolean;
 }
 
 export default function InventoryPage() {
@@ -55,6 +58,7 @@ export default function InventoryPage() {
   
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
+    description: '',
     brand: '',
     category: '',
     type: 'prepackaged',
@@ -63,7 +67,8 @@ export default function InventoryPage() {
     unit: '',
     lowStockThreshold: 10,
     barcode: '',
-    variants: []
+    variants: [],
+    isActive: true
   });
 
   // Fetch products on component mount
@@ -167,6 +172,7 @@ export default function InventoryPage() {
     setEditingProduct(product);
     setFormData({
       name: product.name,
+      description: product.description || '',
       brand: product.brand || '',
       category: product.category,
       type: product.type,
@@ -175,7 +181,8 @@ export default function InventoryPage() {
       unit: product.unit,
       lowStockThreshold: product.lowStockThreshold,
       barcode: product.barcode || '',
-      variants: product.variants || []
+      variants: product.variants || [],
+      isActive: product.isActive
     });
     setShowAddDialog(true);
   };
@@ -212,6 +219,7 @@ export default function InventoryPage() {
   const resetForm = () => {
     setFormData({
       name: '',
+      description: '',
       brand: '',
       category: '',
       type: 'prepackaged',
@@ -220,7 +228,8 @@ export default function InventoryPage() {
       unit: '',
       lowStockThreshold: 10,
       barcode: '',
-      variants: []
+      variants: [],
+      isActive: true
     });
   };
 
@@ -332,6 +341,15 @@ export default function InventoryPage() {
           onClick: () => {
             resetForm();
             setShowAddDialog(true);
+          }
+        },
+        { 
+          label: 'Adjust Stock', 
+          icon: Package, 
+          variant: 'outline',
+          onClick: () => {
+            // This would open the stock adjustment dialog
+            // Implementation depends on how you want to integrate it
           }
         }
       ]} />

@@ -30,11 +30,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       try {
         console.log('Checking authentication...');
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-        console.log('API Base URL:', apiBaseUrl);
         
-        // Validate JWT token by making an API call
-        const response = await fetch(`${apiBaseUrl}/auth/admin-login/verify`, {
+        // Validate JWT token by making an API call using the new auth API
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/auth/admin-login/verify`, {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -42,15 +40,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           },
         });
 
-        console.log('Auth check response status:', response.status);
-        console.log('Auth check response headers:', Object.fromEntries(response.headers.entries()));
-
         if (!response.ok) {
           throw new Error(`Invalid token - Status: ${response.status}`);
         }
 
         const result = await response.json();
-        console.log('Auth check response body:', result);
         
         if (result.success) {
           setAdminUser({
@@ -67,7 +61,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         // Clear any existing tokens
         if (typeof document !== 'undefined') {
           document.cookie = 'admin-token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-          localStorage.removeItem('admin-token');
         }
         // Only redirect if not already on login page
         if (pathname !== '/admin-login') {
@@ -79,10 +72,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       }
     };
 
-    // Add a small delay to ensure cookies are properly set
-    const timer = setTimeout(checkAuth, 100);
-    return () => clearTimeout(timer);
-  }, [router, toast, pathname, isAuthenticated]);
+    checkAuth();
+  }, [router, pathname, isAuthenticated]);
 
   const handleLogout = async () => {
     try {
@@ -96,10 +87,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       });
 
       if (response.ok) {
-        // Clear any remaining localStorage tokens
-        if (typeof localStorage !== 'undefined') {
-          localStorage.removeItem('admin-token');
-        }
         router.push('/admin-login');
         toast({
           title: "Logged Out",
@@ -113,7 +100,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       // Fallback: clear cookies and redirect
       if (typeof document !== 'undefined') {
         document.cookie = 'admin-token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-        localStorage.removeItem('admin-token');
       }
       router.push('/admin-login');
       toast({

@@ -10,6 +10,8 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { DataTable } from '@/components/ui/data-table';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDeviceAdaptive } from '@/hooks/use-device-adaptive';
+import { MobileOrdersManager } from '@/components/mobile/MobileOrdersManager';
 import { ordersApi } from '@/lib/api';
 import { Order, Product, ProductVariant, OrderItem } from '@/lib/types';
 
@@ -211,6 +213,20 @@ export default function OrdersPage() {
     },
   ];
 
+  const { shouldUseMobileView } = useDeviceAdaptive();
+
+  // Mobile view
+  if (shouldUseMobileView) {
+    return (
+      <MobileOrdersManager
+        orders={orders}
+        loading={loading}
+        onRefreshOrders={handleRefresh}
+      />
+    );
+  }
+
+  // Desktop view
   return (
     <div className="space-y-6">
       <Breadcrumbs />

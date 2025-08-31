@@ -11,6 +11,8 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { Numpad } from '@/components/ui/numpad';
 import { useToast } from '@/hooks/use-toast';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import { useDeviceAdaptive } from '@/hooks/use-device-adaptive';
+import { MobilePOSManager } from '@/components/mobile/MobilePOSManager';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 interface CartItem {
@@ -369,6 +371,27 @@ export default function POSPage() {
     }
   };
 
+  const { shouldUseMobileView } = useDeviceAdaptive();
+
+  // Mobile view
+  if (shouldUseMobileView) {
+    return (
+      <MobilePOSManager
+        products={products}
+        loading={loading}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onAddToCart={addToCart}
+        cart={cart}
+        calculation={calculation}
+        onRemoveFromCart={removeFromCart}
+        onClearCart={() => setCart([])}
+        onCheckout={handleCheckout}
+      />
+    );
+  }
+
+  // Desktop view
   return (
     <div className="space-y-6">
       <Breadcrumbs />

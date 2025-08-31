@@ -11,6 +11,8 @@ import { MetricCard } from '@/components/ui/metric-card';
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDeviceAdaptive } from '@/hooks/use-device-adaptive';
+import { MobileAnalyticsManager } from '@/components/mobile/MobileAnalyticsManager';
 import { analyticsApi } from '@/lib/api';
 
 // Import Recharts components
@@ -96,6 +98,14 @@ export default function AnalyticsPage() {
     }
   };
 
+  const { shouldUseMobileView } = useDeviceAdaptive();
+
+  // Mobile view
+  if (shouldUseMobileView) {
+    return <MobileAnalyticsManager />;
+  }
+
+  // Desktop view
   return (
     <div className="space-y-6">
       <Breadcrumbs />

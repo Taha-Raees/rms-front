@@ -121,16 +121,6 @@ export interface User {
   lastLogin?: Date;
 }
 
-export interface AdminUser {
-  id: string;
-  email: string;
-  password: string;
-  role: 'admin';
-  isActive: boolean;
-  createdAt: Date;
-  lastLogin?: Date;
-}
-
 // API Response Types
 export interface ApiResponse<T = any> {
   success: boolean;

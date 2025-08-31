@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import { useDeviceAdaptive } from '@/hooks/use-device-adaptive';
+import { MobileCustomerDisplayManager } from '@/components/mobile/MobileCustomerDisplayManager';
 import { WebSocketEvent } from '@/hooks/useWebSocket';
 import { format } from 'date-fns';
 import { ShoppingCart, Wifi, WifiOff, CheckCircle, XCircle, Clock, Package, Scale } from 'lucide-react';
@@ -104,6 +106,14 @@ export default function CustomerDisplayPage() {
     }
   };
 
+  const { shouldUseMobileView } = useDeviceAdaptive();
+
+  // Mobile view for customer display - simplified controls
+  if (shouldUseMobileView) {
+    return <MobileCustomerDisplayManager />;
+  }
+
+  // Desktop view - full customer display interface
   return (
     <div className="flex flex-col h-screen bg-gray-50 text-gray-800 p-6">
       {/* Header */}

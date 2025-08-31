@@ -8,7 +8,6 @@ import {
   OrderItem, 
   Store, 
   User, 
-  AdminUser, 
   ApiResponse,
   AuthResponse 
 } from './types';
@@ -73,11 +72,8 @@ async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<R
     isRefreshing = true;
 
     try {
-      // Determine if this is an admin endpoint or store endpoint
-      const isAdminEndpoint = url.includes('/auth/admin-login');
-      const refreshEndpoint = isAdminEndpoint 
-        ? `${API_BASE_URL}/auth/admin-login/refresh`
-        : `${API_BASE_URL}/auth/refresh`;
+      // For store endpoints, use store refresh
+      const refreshEndpoint = `${API_BASE_URL}/auth/refresh`;
 
       const refreshResponse = await fetch(refreshEndpoint, {
         method: 'POST',
@@ -93,13 +89,13 @@ async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<R
         processQueue(new Error('Token refresh failed'));
         // Redirect to login
         if (typeof window !== 'undefined') {
-          window.location.href = isAdminEndpoint ? '/admin-login' : '/login';
+          window.location.href = '/login';
         }
       }
     } catch (error) {
       processQueue(error);
       if (typeof window !== 'undefined') {
-        window.location.href = url.includes('/auth/admin-login') ? '/admin-login' : '/login';
+        window.location.href = '/login';
       }
     } finally {
       isRefreshing = false;
@@ -355,65 +351,6 @@ export const analyticsApi = {
   },
 };
 
-// Admin API
-export const adminApi = {
-  createStore: async (storeData: any) => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/create-store`, {
-      method: 'POST',
-      body: JSON.stringify(storeData),
-    });
-    return handleResponse<ApiResponse<any>>(response);
-  },
-  
-  getDashboardData: async () => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/analytics/dashboard`);
-    return handleResponse<ApiResponse<any>>(response);
-  },
-  
-  getUsers: async () => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/users`);
-    return handleResponse<ApiResponse<any>>(response);
-  },
-  
-  getStores: async () => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/create-store`);
-    return handleResponse<ApiResponse<any>>(response);
-  },
-  
-  getSubscriptionPackages: async () => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/subscription-packages`);
-    return handleResponse<ApiResponse<any>>(response);
-  },
-
-  // Constraint visualization APIs
-  getConstraints: async () => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/constraints`);
-    return handleResponse<ApiResponse<any>>(response);
-  },
-
-  // Recycle bin APIs
-  getDeletedItems: async () => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/recycle-bin`);
-    return handleResponse<ApiResponse<any>>(response);
-  },
-
-  restoreItem: async (type: string, id: string) => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/recycle-bin/restore`, {
-      method: 'POST',
-      body: JSON.stringify({ type, id }),
-    });
-    return handleResponse<ApiResponse>(response);
-  },
-
-  permanentlyDeleteItem: async (type: string, id: string) => {
-    const response = await apiFetch(`${API_BASE_URL}/admin/recycle-bin/permanent-delete`, {
-      method: 'POST',
-      body: JSON.stringify({ type, id }),
-    });
-    return handleResponse<ApiResponse>(response);
-  },
-};
-
 // Type exports for convenience
 export type { 
   Product, 
@@ -422,7 +359,6 @@ export type {
   OrderItem, 
   Store, 
   User, 
-  AdminUser, 
   ApiResponse,
   AuthResponse 
 };

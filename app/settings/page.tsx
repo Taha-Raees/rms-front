@@ -35,7 +35,7 @@ interface Store {
     receiptPrinting: boolean;
     barcodeScanning: boolean;
   };
-  subscriptionPaymentMethod: string;
+  subscriptionPaymentMethod?: string; // Made optional
   owner: {
     name?: string;
     email?: string;
@@ -50,11 +50,12 @@ interface Store {
     state?: string;
     postalCode?: string;
   };
-  subscription: {
+  subscription?: { // Made optional to prevent runtime errors
     plan: string;
     status: string;
-    expiresAt: string;
+    expiresAt?: string;
   };
+  isActive?: boolean; // Added for status display
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,8 +125,16 @@ export default function SettingsPage() {
         businessType: store.businessType,
         currency: store.currency,
         currencySymbol: store.currencySymbol,
-        settings: { ...store.settings }, // Deep copy settings
-        subscriptionPaymentMethod: store.subscriptionPaymentMethod,
+        settings: {
+          lowStockAlerts: store.settings?.lowStockAlerts || false,
+          autoReorder: store.settings?.autoReorder || false,
+          taxRate: (store.settings as any)?.taxRate || 0, // Handle missing taxRate property
+          discountEnabled: store.settings?.discountEnabled || false,
+          multiplePaymentMethods: store.settings?.multiplePaymentMethods || false,
+          receiptPrinting: store.settings?.receiptPrinting || false,
+          barcodeScanning: store.settings?.barcodeScanning || false,
+        },
+        subscriptionPaymentMethod: (store as any).subscriptionPaymentMethod || '',
         owner: { ...store.owner },
         contact: { ...store.contact },
         address: { ...store.address },
@@ -449,8 +458,8 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div>
               <Label>Current Plan</Label>
-              <p className="text-lg font-semibold">{store?.subscription.plan}</p>
-              <p className="text-sm text-muted-foreground">Status: {store?.subscription.status} • Expires: {store?.subscription.expiresAt ? new Date(store.subscription.expiresAt).toLocaleDateString() : ''}</p>
+              <p className="text-lg font-semibold">{store?.subscription?.plan || 'Basic Plan'}</p>
+              <p className="text-sm text-muted-foreground">Status: {store?.subscription?.status || 'Active'} • Expires: {store?.subscription?.expiresAt ? new Date(store.subscription.expiresAt).toLocaleDateString() : 'Never'}</p>
             </div>
             <div>
               <Label htmlFor="subscriptionPaymentMethod">Payment Method</Label>

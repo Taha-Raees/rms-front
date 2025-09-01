@@ -4,8 +4,11 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronUp, ChevronDown, Trash2, ShoppingCart } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronUp, ChevronDown, Trash2, ShoppingCart, Plus, Minus, CreditCard, Banknote, Smartphone, Edit } from 'lucide-react';
+import { MobileNumpad } from '@/components/ui/mobile-numpad';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface CartItem {
   id: string;
@@ -33,6 +36,9 @@ interface MobilePOSCartProps {
   onRemoveFromCart: (itemId: string) => void;
   onClearCart: () => void;
   onCheckout?: (paymentMethod?: string) => void;
+  onUpdateQuantity?: (itemId: string, quantity: number) => void;
+  onSetCashAmount?: (amount: number) => void;
+  cashAmount?: number;
   expandedByDefault?: boolean;
 }
 
@@ -156,22 +162,38 @@ export function MobilePOSCart({
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex space-x-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
                       onClick={onClearCart}
-                      className="flex-1"
                       disabled={itemCount === 0}
+                      size="sm"
                     >
                       Clear Cart
                     </Button>
-                    <Button
-                      onClick={() => onCheckout?.('card')}
-                      className="flex-1"
-                      disabled={itemCount === 0}
-                    >
-                      Checkout
-                    </Button>
+
+                    {/* Payment method buttons */}
+                    <div className="grid grid-cols-1 gap-1">
+                      <Button
+                        onClick={() => onCheckout?.('cash')}
+                        disabled={itemCount === 0}
+                        size="sm"
+                        className="h-8"
+                      >
+                        <Banknote className="h-3 w-3 mr-1" />
+                        Cash
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => onCheckout?.('card')}
+                        disabled={itemCount === 0}
+                        size="sm"
+                        className="h-8"
+                      >
+                        <CreditCard className="h-3 w-3 mr-1" />
+                        Card
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </>

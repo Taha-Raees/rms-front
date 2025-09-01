@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useDeviceAdaptive } from '@/hooks/use-device-adaptive';
 import { MobilePOSManager } from '@/components/mobile/MobilePOSManager';
+import { productsApi } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 interface CartItem {
@@ -26,6 +28,7 @@ interface CartItem {
   unitPrice: number;
   totalPrice: number;
   displayText: string;
+  discountRate?: number;
 }
 
 interface CalculationResult {
@@ -36,42 +39,13 @@ interface CalculationResult {
   taxRate: number;
 }
 
-// Interfaces matching the backend Prisma schema
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  brand: string;
-  category: string;
-  basePrice: number;
-  unit: string;
-  type: 'prepackaged' | 'loose_weight';
-  stock: number;
-  lowStockThreshold: number;
-  isActive: boolean;
-  imageUrl?: string;
-  variants?: ProductVariant[];
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Product, ProductVariant } from '@/lib/types';
 
-interface ProductVariant {
-  id: string;
-  productId: string;
-  name: string;
-  description?: string;
-  price: number;
-  stock: number;
-  weight?: number;
-  weightUnit?: string;
-  sku: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Use shared interfaces from types.ts to ensure consistency
 
 export default function POSPage() {
   const { toast } = useToast();
+  const { state: authState } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,9 +56,44 @@ export default function POSPage() {
   const [selectedItemForInput, setSelectedItemForInput] = useState<string | null>(null);
   const [calculation, setCalculation] = useState<CalculationResult | null>(null);
   const [cashAmount, setCashAmount] = useState<number>(0);
+  const [lastOrder, setLastOrder] = useState<any>(null);
+  const [showReceipt, setShowReceipt] = useState<boolean>(false);
 
-  // WebSocket for customer display updates
-  const { sendMessage } = useWebSocket();
+  // Debug authentication state
+  console.log('POS - Auth State:', {
+    isLoading: authState.isLoading,
+    userId: authState.user?.id,
+    storeId: authState.user?.storeId,
+    storeName: authState.store?.name
+  });
+
+  // Demo fallback for testing
+  const demoStoreId = 'demo-store-001';
+
+  // WebSocket for customer display updates - now with storeId
+  const { sendMessage, isConnected, error } = useWebSocket({
+    storeId: authState.user?.storeId || demoStoreId,
+    onOpen: () => {
+      console.log('POS - WebSocket connected successfully!');
+    },
+    onError: (err) => {
+      console.error('POS - WebSocket error:', err);
+    }
+  });
+
+  // Debug WebSocket status
+  console.log('POS - WebSocket Status:', { isConnected, error, demoStoreId: demoStoreId });
+
+  // Check if we have store access and redirect if not
+  useEffect(() => {
+    if (!authState.isLoading && !authState.user?.storeId) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have access to any store.",
+        variant: "destructive",
+      });
+    }
+  }, [authState.isLoading, authState.user, toast]);
 
   // Fetch products on component mount
   useEffect(() => {
@@ -144,17 +153,37 @@ export default function POSPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedCategory !== 'all') params.append('category', selectedCategory);
-      if (searchTerm) params.append('search', searchTerm);
+      // For now, fetch all products - in a real implementation,
+      // you'd want filtering capabilities from the API
+      const result = await productsApi.getAll();
 
-      const response = await fetch(`${API_BASE_URL}/products?${params}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setProducts(result.data.filter((p: Product) => p.isActive));
+      if (result.success && result.data) {
+        let filteredProducts = result.data;
+
+        // Basic client-side filtering since API might not support all filters yet
+        if (selectedCategory !== 'all') {
+          filteredProducts = filteredProducts.filter(p => p.category === selectedCategory);
+        }
+
+        if (searchTerm) {
+          const search = searchTerm.toLowerCase();
+          filteredProducts = filteredProducts.filter(p =>
+            p.name.toLowerCase().includes(search) ||
+            (p.brand && p.brand.toLowerCase().includes(search)) ||
+            p.category.toLowerCase().includes(search)
+          );
+        }
+
+        setProducts(filteredProducts);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to fetch products",
+          variant: "destructive",
+        });
       }
     } catch (error) {
+      console.error("POS: Failed to fetch products:", error);
       toast({
         title: "Error",
         description: "Failed to fetch products",
@@ -165,20 +194,57 @@ export default function POSPage() {
     }
   };
 
-  const calculateTotals = async () => {
+  // Frontend calculation logic - more efficient and doesn't require API calls
+  const calculateTotals = () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/pos/calculate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart })
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        setCalculation(result.data);
+      if (cart.length === 0) {
+        setCalculation(null);
+        return;
       }
+
+      let subtotal = 0;
+      let totalDiscount = 0;
+      let taxableAmount = 0;
+      let taxAmount = 0;
+      let totalAmount = 0;
+
+      // Use default tax rate of 17% if not specified
+      const taxRate = 0.17; // Can be made configurable
+
+      const processedItems = cart.map(item => {
+        // Apply individual item discounts
+        const itemDiscount = (item.discountRate || 0) / 100;
+        const discountedPrice = item.unitPrice * (1 - itemDiscount);
+        const itemTotal = discountedPrice * (item.weight || item.quantity);
+
+        subtotal += item.unitPrice * (item.weight || item.quantity);
+        totalDiscount += item.unitPrice * (item.weight || item.quantity) * itemDiscount;
+
+        return {
+          ...item,
+          totalPrice: itemTotal
+        };
+      });
+
+      taxableAmount = subtotal - totalDiscount;
+      taxAmount = taxableAmount * taxRate;
+      totalAmount = taxableAmount + taxAmount;
+
+      setCalculation({
+        items: processedItems,
+        subtotal,
+        tax: taxAmount,
+        total: totalAmount,
+        taxRate
+      });
+
     } catch (error) {
       console.error('Failed to calculate totals:', error);
+      toast({
+        title: "Calculation Error",
+        description: "Failed to calculate cart totals",
+        variant: "destructive",
+      });
     }
   };
 
@@ -326,12 +392,25 @@ export default function POSPage() {
           timestamp: new Date()
         });
 
+        // Save order data for receipt
+        setLastOrder({
+          order: result.data.order,
+          paymentMethod,
+          paidAmount: paymentMethod === 'cash' ? cashAmount : result.data.order.totalAmount,
+          changeAmount: result.data.change || 0,
+          processedAt: new Date(),
+          items: cart
+        });
+
+        // Show receipt
+        setShowReceipt(true);
+
         toast({
           title: "Order Completed",
           description: `Order ${result.data.order.orderNumber} processed successfully!`,
           variant: "default",
         });
-        
+
         if (paymentMethod === 'cash' && result.data.change > 0) {
           toast({
             title: "Change Due",
@@ -375,6 +454,11 @@ export default function POSPage() {
 
   // Mobile view
   if (shouldUseMobileView) {
+    const handleMobileCheckout = () => {
+      // Default to cash payment for mobile view
+      handleCheckout('cash');
+    };
+
     return (
       <MobilePOSManager
         products={products}
@@ -386,7 +470,7 @@ export default function POSPage() {
         calculation={calculation}
         onRemoveFromCart={removeFromCart}
         onClearCart={() => setCart([])}
-        onCheckout={handleCheckout}
+        onCheckout={handleMobileCheckout}
       />
     );
   }
@@ -395,6 +479,13 @@ export default function POSPage() {
   return (
     <div className="space-y-6">
       <Breadcrumbs />
+
+      {/* WebSocket Connection Status */}
+      <div className={`fixed top-4 right-4 p-2 rounded-lg text-sm font-medium ${
+        isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+      }`}>
+        {isConnected ? '🟢 Connected to Customer Display' : '🔴 Customer Display Disconnected'}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Product Selection */}
@@ -471,15 +562,17 @@ export default function POSPage() {
                       </div>
 
                       {/* Product variants or base price */}
-                      {product.variants && product.variants.length > 0 ? (
+                      {product.variants && product.variants.filter(v => v.isActive).length > 0 ? (
                         <div className="space-y-2">
-                          {product.variants.map(variant => (
+                          {product.variants.filter(v => v.isActive).map(variant => (
                             <div key={variant.id} className="flex items-center justify-between p-2 border rounded">
                               <div>
                                 <span className="text-sm font-medium">{variant.name}</span>
                                 <div className="text-xs text-muted-foreground">
-                                  PKR {variant.price}
+                                  <div>Sell: PKR {variant.price}</div>
+                                  <div>Cost: PKR {variant.cost}</div>
                                   {variant.weight && ` • ${variant.weight}${variant.weightUnit}`}
+                                  {` • Stock: ${variant.stock}`}
                                 </div>
                               </div>
                               <Button

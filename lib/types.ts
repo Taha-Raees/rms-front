@@ -4,18 +4,17 @@
 export interface Product {
   id: string;
   name: string;
-  description: string;
-  brand: string;
+  brand?: string;
   category: string;
+  type: 'branded_packet' | 'loose_weight' | 'unit_based';
+  baseCost: number;
   basePrice: number;
-  unit: string;
-  type: 'prepackaged' | 'loose_weight';
   stock: number;
+  unit: string;
   lowStockThreshold: number;
-  isActive: boolean;
-  imageUrl?: string;
   barcode?: string;
   variants?: ProductVariant[];
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
@@ -25,11 +24,11 @@ export interface ProductVariant {
   id: string;
   productId: string;
   name: string;
-  description?: string;
+  weight: number;
+  weightUnit: string;
   price: number;
+  cost: number;
   stock: number;
-  weight?: number;
-  weightUnit?: string;
   sku: string;
   isActive: boolean;
   createdAt: Date;

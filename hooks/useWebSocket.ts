@@ -5,7 +5,7 @@ import { io, Socket } from 'socket.io-client';
 const WEBSOCKET_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 export interface WebSocketEvent {
-  type: 'pos_cart_update' | 'pos_order_completed' | 'pos_cart_cleared' | 'pos_payment_started' | 'stock_update' | 'order_status' | 'payment_received' | 'low_stock_alert' | 'new_order';
+  type: 'pos_cart_update' | 'pos_cart_cleared' | 'pos_payment_started' | 'pos_order_completed' | 'stock_update' | 'order_status' | 'payment_received' | 'low_stock_alert' | 'new_order';
   data: any;
   timestamp: Date;
 }
@@ -34,16 +34,25 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const connect = () => {
     if (socketRef.current?.connected) return;
 
+    console.log('WebSocket: Attempting to connect...', {
+      url: WEBSOCKET_URL,
+      storeId
+    });
+
     if (!storeId) {
       setError('Store ID is required to connect');
+      console.error('WebSocket: No storeId provided');
       return;
     }
 
     socketRef.current = io(WEBSOCKET_URL, {
-      path: '/websocket',
+      transports: ['websocket', 'polling'],
+      path: '/socket.io', // Default Socket.IO path, not /websocket
       auth: {
         storeId,
       },
+      timeout: 10000, // 10 second timeout
+      forceNew: true,
     });
 
     const socket = socketRef.current;
@@ -78,9 +87,40 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       onMessage?.({ type: 'new_order', data, timestamp: new Date() });
     });
 
+    // Handle POS events from other connections
+    socket.on('pos_cart_update', (data: unknown) => {
+      onMessage?.({ type: 'pos_cart_update', data, timestamp: new Date() });
+    });
+
+    socket.on('pos_cart_cleared', (data: unknown) => {
+      onMessage?.({ type: 'pos_cart_cleared', data, timestamp: new Date() });
+    });
+
+    socket.on('pos_payment_started', (data: unknown) => {
+      onMessage?.({ type: 'pos_payment_started', data, timestamp: new Date() });
+    });
+
+    socket.on('pos_order_completed', (data: unknown) => {
+      onMessage?.({ type: 'pos_order_completed', data, timestamp: new Date() });
+    });
+
     socket.on('error', (err: Error) => {
+      console.error('WebSocket error:', err);
       setError(err.message);
       onError?.(err);
+    });
+
+    socket.on('connect_error', (err: Error) => {
+      console.error('WebSocket connect error:', err);
+      setError(`Connection failed: ${err.message}`);
+    });
+
+    socket.on('reconnect_attempt', () => {
+      console.log('WebSocket: Attempting to reconnect...');
+    });
+
+    socket.on('reconnect', () => {
+      console.log('WebSocket: Reconnected successfully');
     });
 
     socket.on('disconnect', (reason: string) => {

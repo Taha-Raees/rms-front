@@ -8,12 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Package, AlertTriangle, Edit, Trash2, Scale, Box } from 'lucide-react';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { Product, ProductVariant } from '@/lib/types';
 import { DataTable } from '@/components/ui/data-table';
 import { MetricCard } from '@/components/ui/metric-card';
 import { useToast } from '@/hooks/use-toast';
-import { productsApi, inventoryApi } from '@/lib/api';
-import { Product, ProductVariant } from '@/lib/types';
-import { StockAdjustmentDialog } from '@/components/inventory/StockAdjustmentDialog';
+import { productsApi } from '@/lib/api';
 
 import {
   Dialog,
@@ -34,10 +33,10 @@ import {
 // Interfaces for form data
 interface ProductFormData {
   name: string;
-  description: string;
-  brand: string;
+  brand?: string;
   category: string;
-  type: 'prepackaged' | 'loose_weight';
+  type: 'branded_packet' | 'loose_weight' | 'unit_based';
+  baseCost: number;
   basePrice: number;
   stock: number;
   unit: string;
@@ -58,10 +57,10 @@ export default function InventoryPage() {
   
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
-    description: '',
     brand: '',
     category: '',
-    type: 'prepackaged',
+    type: 'branded_packet',
+    baseCost: 0,
     basePrice: 0,
     stock: 0,
     unit: '',
@@ -172,10 +171,10 @@ export default function InventoryPage() {
     setEditingProduct(product);
     setFormData({
       name: product.name,
-      description: product.description || '',
       brand: product.brand || '',
       category: product.category,
       type: product.type,
+      baseCost: product.baseCost,
       basePrice: product.basePrice,
       stock: product.stock,
       unit: product.unit,
@@ -219,10 +218,10 @@ export default function InventoryPage() {
   const resetForm = () => {
     setFormData({
       name: '',
-      description: '',
       brand: '',
       category: '',
-      type: 'prepackaged',
+      type: 'branded_packet',
+      baseCost: 0,
       basePrice: 0,
       stock: 0,
       unit: '',
@@ -230,6 +229,41 @@ export default function InventoryPage() {
       barcode: '',
       variants: [],
       isActive: true
+    });
+  };
+
+  const addVariant = () => {
+    const newVariant: ProductVariant = {
+      id: `var_${Date.now()}`,
+      name: '',
+      weight: 0,
+      weightUnit: 'kg',
+      price: 0,
+      cost: 0,
+      stock: 0,
+      sku: '',
+      productId: '',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    setFormData({
+      ...formData,
+      variants: [...(formData.variants || []), newVariant]
+    });
+  };
+
+  const updateVariant = (index: number, updates: Partial<ProductVariant>) => {
+    const updatedVariants = (formData.variants || []).map((variant, i) =>
+      i === index ? { ...variant, ...updates } : variant
+    );
+    setFormData({ ...formData, variants: updatedVariants });
+  };
+
+  const removeVariant = (index: number) => {
+    setFormData({
+      ...formData,
+      variants: (formData.variants || []).filter((_, i) => i !== index)
     });
   };
 
@@ -496,14 +530,26 @@ export default function InventoryPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="prepackaged">Prepackaged</SelectItem>
+                    <SelectItem value="branded_packet">Branded Packet</SelectItem>
                     <SelectItem value="loose_weight">Loose Weight</SelectItem>
+                    <SelectItem value="unit_based">Unit Based</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="baseCost">Cost Price (PKR) *</Label>
+                <Input
+                  id="baseCost"
+                  type="number"
+                  step="0.01"
+                  value={formData.baseCost}
+                  onChange={(e) => setFormData({ ...formData, baseCost: parseFloat(e.target.value) || 0 })}
+                  required
+                />
+              </div>
               <div>
                 <Label htmlFor="basePrice">Selling Price (PKR) *</Label>
                 <Input
@@ -515,6 +561,9 @@ export default function InventoryPage() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="stock">Current Stock *</Label>
                 <Input
@@ -537,6 +586,121 @@ export default function InventoryPage() {
               </div>
             </div>
 
+            <div>
+              <Label htmlFor="barcode">Barcode</Label>
+              <Input
+                id="barcode"
+                value={formData.barcode || ''}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+              />
+            </div>
+
+            {/* Product Variants */}
+            {formData.type === 'branded_packet' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Product Variants</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addVariant}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Variant
+                  </Button>
+                </div>
+
+                {formData.variants?.map((variant, index) => (
+                  <div key={variant.id} className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Variant {index + 1}</h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeVariant(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Variant Name</Label>
+                        <Input
+                          value={variant.name}
+                          onChange={(e) => updateVariant(index, { name: e.target.value })}
+                          placeholder="e.g., 1kg Pack"
+                        />
+                      </div>
+                      <div>
+                        <Label>SKU</Label>
+                        <Input
+                          value={variant.sku}
+                          onChange={(e) => updateVariant(index, { sku: e.target.value })}
+                          placeholder="e.g., RICE-1KG"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <Label>Weight</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={variant.weight || ''}
+                          onChange={(e) => updateVariant(index, { weight: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Unit</Label>
+                        <Select
+                          value={variant.weightUnit}
+                          onValueChange={(value) => updateVariant(index, { weightUnit: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="kg">kg</SelectItem>
+                            <SelectItem value="g">g</SelectItem>
+                            <SelectItem value="L">L</SelectItem>
+                            <SelectItem value="ml">ml</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Stock</Label>
+                        <Input
+                          type="number"
+                          value={variant.stock}
+                          onChange={(e) => updateVariant(index, { stock: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Cost Price</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={variant.cost}
+                          onChange={(e) => updateVariant(index, { cost: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Selling Price</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={variant.price}
+                          onChange={(e) => updateVariant(index, { price: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="lowStockThreshold">Low Stock Alert</Label>
@@ -545,14 +709,6 @@ export default function InventoryPage() {
                   type="number"
                   value={formData.lowStockThreshold}
                   onChange={(e) => setFormData({ ...formData, lowStockThreshold: parseInt(e.target.value) || 10 })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="barcode">Barcode</Label>
-                <Input
-                  id="barcode"
-                  value={formData.barcode || ''}
-                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                 />
               </div>
             </div>

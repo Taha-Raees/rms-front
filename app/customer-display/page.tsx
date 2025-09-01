@@ -10,6 +10,7 @@ import { ShoppingCart, Wifi, WifiOff, CheckCircle, XCircle, Clock, Package, Scal
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth for WebSocket
 import { useApp } from '@/contexts/AppContext'; // Import useApp
 
 interface DisplayItem {
@@ -39,6 +40,15 @@ interface CustomerDisplayData {
 export default function CustomerDisplayPage() {
   const { state } = useApp(); // Use the AppContext
   const { store } = state; // Get store from state
+  const { state: authState } = useAuth(); // Use auth context for WebSocket
+
+  // Debug authentication state
+  console.log('Customer Display - Auth State:', {
+    isLoading: authState.isLoading,
+    userId: authState.user?.id,
+    storeId: authState.user?.storeId,
+    storeName: authState.store?.name
+  });
 
   const [displayData, setDisplayData] = useState<CustomerDisplayData | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected');
@@ -77,7 +87,10 @@ export default function CustomerDisplayPage() {
     }
   }, []);
 
-  const { isConnected } = useWebSocket({ onMessage });
+  const { isConnected } = useWebSocket({
+    storeId: authState.user?.storeId,
+    onMessage
+  });
 
   useEffect(() => {
     setConnectionStatus(isConnected ? 'connected' : 'disconnected');

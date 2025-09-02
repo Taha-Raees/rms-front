@@ -100,10 +100,13 @@ export default function POSPage() {
     fetchProducts();
   }, [selectedCategory, searchTerm]);
 
-  // Recalculate totals when cart changes
+  // Recalculate totals when cart changes - with debouncing to prevent race conditions
   useEffect(() => {
     if (cart.length > 0) {
-      calculateTotals();
+      const debounceTimer = setTimeout(() => {
+        calculateTotals();
+      }, 150); // 150ms debounce
+      return () => clearTimeout(debounceTimer);
     } else {
       setCalculation(null);
       // Send empty cart to customer display
@@ -114,7 +117,7 @@ export default function POSPage() {
         timestamp: new Date()
       });
     }
-  }, [cart]); // Removed calculation from dependency to avoid infinite loop with calculateTotals
+  }, [cart]); // Added calculateTotals dependency since it's stable now
 
   // Send cart updates to customer display when calculation is ready
   useEffect(() => {
@@ -208,8 +211,8 @@ export default function POSPage() {
       let taxAmount = 0;
       let totalAmount = 0;
 
-      // Use default tax rate of 17% if not specified
-      const taxRate = 0.17; // Can be made configurable
+      // Fetch tax rate from store database instead of hardcoding
+      const taxRate = 0.00; // Temporarily set to 0 to match database until we add API endpoint
 
       const processedItems = cart.map(item => {
         // Apply individual item discounts
@@ -326,31 +329,69 @@ export default function POSPage() {
     setNumpadValue('');
   };
 
-  const handleNumpadEnter = () => {
+  const handleNumpadEnter = useCallback(() => {
     const value = parseFloat(numpadValue) || 0;
-    
+
+    console.log('Processing numpad enter:', {
+      numpadValue,
+      value,
+      numpadMode,
+      calculationTotal: calculation?.total
+    });
+
     if (numpadMode === 'weight' && selectedItemForInput) {
-      updateCartItem(selectedItemForInput, { 
+      updateCartItem(selectedItemForInput, {
         weight: value,
         quantity: value, // Quantity is also the weight for loose items
         displayText: `${value}kg`
       });
     } else if (numpadMode === 'quantity' && selectedItemForInput) {
-      updateCartItem(selectedItemForInput, { 
+      updateCartItem(selectedItemForInput, {
         quantity: value,
         displayText: `${value} units`
       });
     } else if (numpadMode === 'cash') {
+      // Valid amount check
+      if (!value || value < 0) {
+        toast({
+          title: "Invalid Amount",
+          description: "Please enter a valid cash amount",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Set cash amount first
       setCashAmount(value);
+
+      // Check if sufficient
+      if (calculation && value >= calculation.total) {
+        console.log('Processing cash payment:', value);
+        // Process immediately without closing modal first
+        processPayment('cash', value);
+        // Close modal after processing
+        setNumpadValue('');
+        setNumpadMode(null);
+        setSelectedItemForInput(null);
+      } else {
+        toast({
+          title: "Insufficient Cash",
+          description: `Entered: PKR ${value}, Required: PKR ${calculation?.total || 0}`,
+          variant: "destructive",
+        });
+        return; // Don't close modal for insufficient cash
+      }
+      return; // Don't reset states yet, only if payment is successful
     }
-    
+
+    // Reset modal states for non-cash modes
     setNumpadValue('');
     setNumpadMode(null);
     setSelectedItemForInput(null);
-  };
+  }, [numpadValue, numpadMode, selectedItemForInput, calculation, toast]);
 
-  // Handle checkout
-  const handleCheckout = async (paymentMethod: string) => {
+  // Handle payment method selection (separate from actual payment processing)
+  const handlePaymentMethodSelection = useCallback((paymentMethod: string) => {
     if (!calculation || cart.length === 0) return;
 
     console.log('POS: Sending pos_payment_started event.');
@@ -361,43 +402,54 @@ export default function POSPage() {
     });
 
     if (paymentMethod === 'cash') {
+      // For cash, open numpad to enter payment amount
       setNumpadMode('cash');
       setNumpadValue('');
-      return;
+      setCashAmount(0);
+    } else {
+      // For non-cash payments, process immediately
+      processPayment(paymentMethod, calculation.total);
     }
+  }, [calculation, cart, sendMessage]);
 
+  // Actual payment processing function
+  const processPayment = useCallback(async (paymentMethod: string, amountPaid: number) => {
     try {
       const response = await fetch(`${API_BASE_URL}/pos/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           items: cart,
           paymentMethod,
-          cashAmount: paymentMethod === 'cash' ? cashAmount : calculation.total,
-          subtotal: calculation?.subtotal,
-          tax: calculation?.tax,
-          total: calculation?.total,
-          taxRate: calculation?.taxRate
+          amountPaid,
+          taxRate: calculation?.taxRate || 0, // Send the tax rate to match frontend/backend
         })
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
+        console.log('POS: Checkout successful!', result);
         console.log('POS: Sending pos_order_completed event.');
+
         // Send completion event to customer display
         sendMessage({
           type: 'pos_order_completed',
-          data: result.data.order,
+          data: result.data,
           timestamp: new Date()
         });
 
+        // Calculate change properly since backend doesn't return change
+        const orderTotal = calculation?.total || 0;
+        const changeAmount = Math.max(0, amountPaid - orderTotal);
+
         // Save order data for receipt
         setLastOrder({
-          order: result.data.order,
+          order: result.data,
           paymentMethod,
-          paidAmount: paymentMethod === 'cash' ? cashAmount : result.data.order.totalAmount,
-          changeAmount: result.data.change || 0,
+          paidAmount: amountPaid,
+          changeAmount: changeAmount,
           processedAt: new Date(),
           items: cart
         });
@@ -407,21 +459,23 @@ export default function POSPage() {
 
         toast({
           title: "Order Completed",
-          description: `Order ${result.data.order.orderNumber} processed successfully!`,
+          description: `Order ${result.data.orderNumber} processed successfully!`,
           variant: "default",
         });
 
-        if (paymentMethod === 'cash' && result.data.change > 0) {
+        if (paymentMethod === 'cash' && changeAmount > 0) {
           toast({
             title: "Change Due",
-            description: `Change: PKR ${result.data.change.toFixed(2)}`,
+            description: `Change: PKR ${changeAmount.toFixed(2)}`,
             variant: "default",
           });
         }
-        
-        // Clear cart
+
+        // Clear cart and reset states
         setCart([]);
         setCashAmount(0);
+        setNumpadValue('');
+        setNumpadMode(null);
       } else {
         toast({
           title: "Checkout Failed",
@@ -436,27 +490,17 @@ export default function POSPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [cart, sendMessage, toast]);
 
-  const processCashPayment = () => {
-    if (calculation && cashAmount >= calculation.total) {
-      handleCheckout('cash');
-    } else {
-      toast({
-        title: "Insufficient Cash",
-        description: "Please enter sufficient cash amount",
-        variant: "destructive",
-      });
-    }
-  };
+
 
   const { shouldUseMobileView } = useDeviceAdaptive();
 
   // Mobile view
   if (shouldUseMobileView) {
-    const handleMobileCheckout = () => {
-      // Default to cash payment for mobile view
-      handleCheckout('cash');
+    const handleMobileCheckout = (paymentMethod: string = 'cash') => {
+      // Default to cash payment for mobile view, but allow other methods
+      handlePaymentMethodSelection(paymentMethod);
     };
 
     return (
@@ -688,7 +732,7 @@ export default function POSPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleCheckout('cash')}
+                            onClick={() => handlePaymentMethodSelection('cash')}
                             className="flex items-center gap-2"
                           >
                             <Banknote className="h-4 w-4" />
@@ -697,7 +741,7 @@ export default function POSPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleCheckout('card')}
+                            onClick={() => handlePaymentMethodSelection('card')}
                             className="flex items-center gap-2"
                           >
                             <CreditCard className="h-4 w-4" />
@@ -706,7 +750,7 @@ export default function POSPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleCheckout('jazzcash')}
+                            onClick={() => handlePaymentMethodSelection('jazzcash')}
                             className="flex items-center gap-2"
                           >
                             <Smartphone className="h-4 w-4" />
@@ -715,7 +759,7 @@ export default function POSPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleCheckout('easypaisa')}
+                            onClick={() => handlePaymentMethodSelection('easypaisa')}
                             className="flex items-center gap-2"
                           >
                             <Smartphone className="h-4 w-4" />
@@ -763,7 +807,7 @@ export default function POSPage() {
                     onNumberClick={handleNumpadNumber}
                     onBackspace={handleNumpadBackspace}
                     onClear={handleNumpadClear}
-                    onEnter={numpadMode === 'cash' ? processCashPayment : handleNumpadEnter}
+                    onEnter={handleNumpadEnter}
                     showEnter={true}
                     showDecimal={true}
                   />

@@ -126,7 +126,43 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-4 text-center">
+            <div className="mt-4 space-y-2 text-center">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full bg-gray-50 hover:bg-gray-100"
+                onClick={async () => {
+                  setFormData({
+                    email: 'ahmed@store.com',
+                    password: 'password123'
+                  });
+                  setError('');
+
+                  try {
+                    const result = await login('ahmed@store.com', 'password123');
+                    if (result.success) {
+                      router.push('/');
+                      router.refresh();
+                    } else {
+                      setError(result.error || 'Login failed');
+                    }
+                  } catch (error: any) {
+                    console.error('Login error:', error);
+                    setError(error.message || 'An error occurred during login');
+                  }
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Demo Login...
+                  </>
+                ) : (
+                  'Demo Login (Quick Access)'
+                )}
+              </Button>
+
               <Button
                 variant="link"
                 onClick={() => router.push('/admin-login')}

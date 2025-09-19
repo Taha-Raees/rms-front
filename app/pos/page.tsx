@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Minus, Search, ShoppingCart, CreditCard, Banknote, Smartphone, Trash2, Scale, Package } from 'lucide-react';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+
 import { Numpad } from '@/components/ui/numpad';
 import { useToast } from '@/hooks/use-toast';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -522,8 +522,6 @@ export default function POSPage() {
   // Desktop view
   return (
     <div className="space-y-6">
-      <Breadcrumbs />
-
       {/* WebSocket Connection Status */}
       <div className={`fixed top-4 right-4 p-2 rounded-lg text-sm font-medium ${
         isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -536,19 +534,20 @@ export default function POSPage() {
         <div className="lg:col-span-2 space-y-4">
           {/* Search and Filters */}
           <Card className="rounded-sm"> {/* Added rounded-sm */}
-            <CardHeader>
-              <CardTitle>Products</CardTitle>
-              <CardDescription>Select items to add to cart</CardDescription>
-            </CardHeader>
             <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold mb-1 md:mb-0">Products</h3>
+                </div>
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
 
               {/* Category Filter */}
@@ -568,7 +567,7 @@ export default function POSPage() {
           </Card>
 
           {/* Product Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="animate-pulse rounded-sm"> {/* Added rounded-sm */}
@@ -578,15 +577,76 @@ export default function POSPage() {
                 </Card>
               ))
             ) : (
-              products.map(product => (
-                <Card key={product.id} className="hover:shadow-md transition-shadow rounded-sm"> {/* Added rounded-sm */}
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold">{product.name}</h3>
-                          <p className="text-sm text-muted-foreground">{product.brand}</p>
-                          <div className="flex items-center gap-2 mt-1">
+              products.map(product => {
+                const hasActiveVariants = product.variants?.filter(v => !v.deletedAt).length > 0;
+                const isOutOfStock = product.stock === 0 && !hasActiveVariants;
+
+                return (
+                  <Card
+                    key={product.id}
+                    className={`hover:shadow-md transition-shadow rounded-sm relative ${
+                      !hasActiveVariants ? 'cursor-pointer' : ''
+                    } ${
+                      isOutOfStock ? 'cursor-not-allowed opacity-50 blur-[0.8px]' : ''
+                    }`}
+                    onClick={!hasActiveVariants ? () => addToCart(product) : undefined}
+                  >
+                    {isOutOfStock && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-sm z-10">
+                        <span className="font-semibold text-gray-600 text-sm">Out of Stock</span>
+                      </div>
+                    )}
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold">{product.name}</h3>
+                            <p className="text-sm text-muted-foreground">{product.brand}</p>
+                          </div>
+                        </div>
+
+                        {/* Product variants or base price */}
+                        {hasActiveVariants ? (
+                          (() => {
+                            const variants = product.variants?.filter(v => !v.deletedAt) || [];
+                            const gridColsClass = variants.length === 1 ? "grid-cols-1" :
+                                                 variants.length === 2 ? "grid-cols-2" :
+                                                 "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4";
+                            return (
+                              <div className={`grid ${gridColsClass} gap-2`}>
+                                {variants.map(variant => (
+                                  <Card
+                                    key={variant.id}
+                                    className={`p-3 hover:shadow-sm rounded-sm cursor-pointer transition-all relative ${
+                                      variant.stock === 0
+                                        ? 'cursor-not-allowed opacity-50 blur-[0.8px] hover:shadow-sm'
+                                        : 'hover:shadow-md'
+                                    }`}
+                                    onClick={() => addToCart(product, variant)}
+                                  >
+                                    {variant.stock === 0 && (
+                                      <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-sm z-10">
+                                        <span className="font-semibold text-gray-600 text-sm">Out of Stock</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <h4 className="font-medium text-sm">{variant.name}</h4>
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        <div className="price-text">PKR {variant.price}</div>
+                                        {variant.weight && (
+                                          <div className="text-xs">{variant.weight} {variant.weightUnit}</div>
+                                        )}
+                                      </div>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                ))}
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <div className="flex items-center gap-2 mt-2">
                             {product.type === 'loose_weight' ? (
                               <Badge variant="outline" className="text-xs">
                                 <Scale className="h-3 w-3 mr-1" />
@@ -598,56 +658,17 @@ export default function POSPage() {
                                 Packaged
                               </Badge>
                             )}
+                            <span className="text-m font-bold price-text">
+                              PKR {product.basePrice}
+                              {product.type === 'loose_weight' && `/${product.unit}`}
+                            </span>
                           </div>
-                        </div>
-                        <Badge variant={product.stock > product.lowStockThreshold ? 'success' : 'warning'}>
-                          {product.stock} {product.unit}
-                        </Badge>
+                        )}
                       </div>
-
-                      {/* Product variants or base price */}
-                      {product.variants && product.variants.filter(v => v.isActive).length > 0 ? (
-                        <div className="space-y-2">
-                          {product.variants.filter(v => v.isActive).map(variant => (
-                            <div key={variant.id} className="flex items-center justify-between p-2 border rounded">
-                              <div>
-                                <span className="text-sm font-medium">{variant.name}</span>
-                                <div className="text-xs text-muted-foreground">
-                                  <div>Sell: PKR {variant.price}</div>
-                                  <div>Cost: PKR {variant.cost}</div>
-                                  {variant.weight && ` • ${variant.weight}${variant.weightUnit}`}
-                                  {` • Stock: ${variant.stock}`}
-                                </div>
-                              </div>
-                              <Button
-                                size="sm"
-                                onClick={() => addToCart(product, variant)}
-                                disabled={variant.stock === 0}
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold">
-                            PKR {product.basePrice}
-                            {product.type === 'loose_weight' && `/${product.unit}`}
-                          </span>
-                          <Button
-                            size="sm"
-                            onClick={() => addToCart(product)}
-                            disabled={product.stock === 0}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         </div>
@@ -674,7 +695,7 @@ export default function POSPage() {
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.product.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {item.displayText} • PKR {item.unitPrice}
+                            {item.displayText} • <span className="price-text">PKR {item.unitPrice}</span>
                             {item.product.type === 'loose_weight' ? `/${item.product.unit}` : ' each'}
                           </p>
                         </div>
@@ -712,16 +733,16 @@ export default function POSPage() {
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span>Subtotal:</span>
-                          <span>PKR {calculation.subtotal.toFixed(2)}</span>
+                          <span className="price-text">{calculation.subtotal.toFixed(2)} PKR</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span>Tax ({(calculation.taxRate * 100).toFixed(1)}%):</span>
-                          <span>PKR {calculation.tax.toFixed(2)}</span>
+                          <span className="price-text">{calculation.tax.toFixed(2)} PKR</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between font-bold text-lg">
                           <span>Total:</span>
-                          <span>PKR {calculation.total.toFixed(2)}</span>
+                          <span className="price-text">{calculation.total.toFixed(2)} PKR</span>
                         </div>
                       </div>
 
@@ -793,7 +814,7 @@ export default function POSPage() {
                     </div>
                     {numpadMode === 'cash' && calculation && (
                       <div className="text-sm text-muted-foreground mt-2">
-                        Total: PKR {calculation.total.toFixed(2)}
+                        Total: <span className="price-text">{calculation.total.toFixed(2)} PKR</span>
                         {parseFloat(numpadValue) > calculation.total && (
                           <div className="text-green-600">
                             Change: PKR {(parseFloat(numpadValue) - calculation.total).toFixed(2)}

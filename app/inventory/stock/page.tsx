@@ -20,7 +20,7 @@ import {
   ArrowLeftRight,
   Plus
 } from 'lucide-react';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+
 import { DataTable } from '@/components/ui/data-table';
 import { MetricCard } from '@/components/ui/metric-card';
 import { useToast } from '@/hooks/use-toast';
@@ -364,26 +364,7 @@ export default function StockManagementPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs actions={[
-        { 
-          label: 'Adjust Stock', 
-          icon: Package, 
-          variant: 'default',
-          onClick: () => setShowAdjustmentDialog(true)
-        },
-        { 
-          label: 'Transfer Stock', 
-          icon: ArrowLeftRight, 
-          variant: 'default',
-          onClick: () => setShowTransferDialog(true)
-        },
-        { 
-          label: 'Cleanup Reservations', 
-          icon: XCircle, 
-          variant: 'outline',
-          onClick: handleCleanupReservations
-        }
-      ]} />
+
 
       {/* Stock Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

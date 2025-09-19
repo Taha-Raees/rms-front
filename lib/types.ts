@@ -24,15 +24,15 @@ export interface ProductVariant {
   id: string;
   productId: string;
   name: string;
-  weight: number;
-  weightUnit: string;
+  weight?: number;
+  weightUnit?: string;
   price: number;
   cost: number;
   stock: number;
   sku: string;
-  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 export interface Order {

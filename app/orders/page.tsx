@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Filter, Calendar, Download, Eye, Printer, RefreshCw, CreditCard } from 'lucide-react';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+
 import { DataTable } from '@/components/ui/data-table';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -229,8 +229,6 @@ export default function OrdersPage() {
   // Desktop view
   return (
     <div className="space-y-6">
-      <Breadcrumbs />
-
       <h2 className="text-3xl font-bold tracking-tight">Order Management</h2>
       <p className="text-muted-foreground">View and manage all customer orders.</p>
 

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { LineChart, BarChart, DollarSign, ShoppingCart, Users, TrendingUp, TrendingDown, Package, AlertTriangle } from 'lucide-react';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+
 import { MetricCard } from '@/components/ui/metric-card';
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/contexts/AppContext';
@@ -108,8 +108,6 @@ export default function AnalyticsPage() {
   // Desktop view
   return (
     <div className="space-y-6">
-      <Breadcrumbs />
-
       <h2 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h2>
       <p className="text-muted-foreground">Gain insights into your store's performance and make data-driven decisions.</p>
 

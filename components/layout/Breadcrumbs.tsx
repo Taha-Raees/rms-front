@@ -19,6 +19,32 @@ interface BreadcrumbAction {
   variant?: 'default' | 'outline' | 'secondary';
 }
 
+// Create context for breadcrumb actions
+export const BreadcrumbActionsContext = React.createContext<{
+  actions: Record<string, BreadcrumbAction[]>;
+  setActions: (page: string, actions: BreadcrumbAction[]) => void;
+}>({
+  actions: {},
+  setActions: () => {},
+});
+
+export const useBreadcrumbActions = () => {
+  const context = React.useContext(BreadcrumbActionsContext);
+  if (!context) {
+    throw new Error('useBreadcrumbActions must be used within a BreadcrumbActionsProvider');
+  }
+  return context;
+};
+
+export const useSetBreadcrumbActions = (page: string, actions: BreadcrumbAction[]) => {
+  const { setActions } = useBreadcrumbActions();
+
+  React.useEffect(() => {
+    setActions(page, actions);
+    return () => setActions(page, []); // Cleanup on unmount
+  }, [page, actions, setActions]);
+};
+
 const pathLabels: Record<string, string> = {
   '': 'Dashboard',
   'pos': 'Point of Sale',
@@ -30,32 +56,47 @@ const pathLabels: Record<string, string> = {
   'settings': 'Settings',
 };
 
-const pathActions: Record<string, BreadcrumbAction[]> = {
-  'inventory': [
-    { label: 'Add Product', icon: Plus, variant: 'default' },
-  ],
-  'orders': [
-    { label: 'Date Range', icon: Calendar, variant: 'outline' },
-    { label: 'Filters', icon: Filter, variant: 'outline' },
-  ],
-  'analytics': [
-    { label: 'Export', icon: Download, variant: 'outline' },
-    { label: 'Settings', icon: Settings, variant: 'outline' },
-  ],
-  'customers': [
-    { label: 'Add Customer', icon: Plus, variant: 'default' },
-  ],
+const getDefaultActions = (currentPageKey: string): BreadcrumbAction[] => {
+  switch (currentPageKey) {
+    case 'orders':
+      return [
+        { label: 'Date Range', icon: Calendar, variant: 'outline' as const },
+        { label: 'Filters', icon: Filter, variant: 'outline' as const },
+      ];
+    case 'analytics':
+      return [
+        { label: 'Export', icon: Download, variant: 'outline' as const },
+        { label: 'Settings', icon: Settings, variant: 'outline' as const },
+      ];
+    case 'customers':
+      return [
+        { label: 'Add Customer', icon: Plus, variant: 'default' as const },
+      ];
+    default:
+      return [];
+  }
 };
 
-interface BreadcrumbsProps {
-  actions?: BreadcrumbAction[];
-}
+export const BreadcrumbActionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [actions, setActionsState] = React.useState<Record<string, BreadcrumbAction[]>>({});
 
-export function Breadcrumbs({ actions }: BreadcrumbsProps) {
+  const setActions = React.useCallback((page: string, actions: BreadcrumbAction[]) => {
+    setActionsState(prev => ({ ...prev, [page]: actions }));
+  }, []);
+
+  return (
+    <BreadcrumbActionsContext.Provider value={{ actions, setActions }}>
+      {children}
+    </BreadcrumbActionsContext.Provider>
+  );
+};
+
+export function Breadcrumbs() {
   const pathname = usePathname();
-  
+  const { actions: customActions } = useBreadcrumbActions();
+
   const pathSegments = pathname.split('/').filter(Boolean);
-  
+
   const breadcrumbs: BreadcrumbItem[] = [
     { label: 'Home', href: '/' },
   ];
@@ -70,12 +111,13 @@ export function Breadcrumbs({ actions }: BreadcrumbsProps) {
     });
   });
 
-  // Get actions for current path
+  // Get actions for current path from context or defaults
   const currentPageKey = pathSegments[pathSegments.length - 1] || '';
-  const pageActions = actions || pathActions[currentPageKey] || [];
+  const customPageActions = customActions ? customActions[currentPageKey] : undefined;
+  const pageActions = customPageActions || getDefaultActions(currentPageKey);
 
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between">
       {/* Breadcrumb Navigation */}
       <nav className="flex items-center space-x-1 text-sm text-muted-foreground">
         {breadcrumbs.map((breadcrumb, index) => (
@@ -105,7 +147,7 @@ export function Breadcrumbs({ actions }: BreadcrumbsProps) {
       {/* Action Buttons */}
       {pageActions.length > 0 && (
         <div className="flex items-center gap-2">
-          {pageActions.map((action, index) => (
+          {pageActions.map((action: BreadcrumbAction, index: number) => (
             <Button
               key={index}
               variant={action.variant || 'outline'}

@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Package, AlertTriangle, Edit, Trash2, Scale, Box } from 'lucide-react';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+
 import { Product, ProductVariant } from '@/lib/types';
 import { DataTable } from '@/components/ui/data-table';
 import { MetricCard } from '@/components/ui/metric-card';
 import { useToast } from '@/hooks/use-toast';
 import { productsApi } from '@/lib/api';
+
 
 import {
   Dialog,
@@ -243,9 +244,9 @@ export default function InventoryPage() {
       stock: 0,
       sku: '',
       productId: '',
-      isActive: true,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      deletedAt: undefined
     };
     setFormData({
       ...formData,
@@ -367,27 +368,6 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs actions={[
-        { 
-          label: 'Add Product', 
-          icon: Plus, 
-          variant: 'default',
-          onClick: () => {
-            resetForm();
-            setShowAddDialog(true);
-          }
-        },
-        { 
-          label: 'Adjust Stock', 
-          icon: Package, 
-          variant: 'outline',
-          onClick: () => {
-            // This would open the stock adjustment dialog
-            // Implementation depends on how you want to integrate it
-          }
-        }
-      ]} />
-
       {/* Inventory Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
@@ -417,22 +397,24 @@ export default function InventoryPage() {
           icon={Package}
         />
       </div>
-
-      {/* Filters */}
-      <Card className="rounded-sm">
+      {/* Products Table */}
+      <Card className="rounded-sm ">
         <CardHeader>
-          <CardTitle>Inventory Filters</CardTitle>
-          <CardDescription>Filter products by status and search</CardDescription>
+          <CardTitle>Product Inventory</CardTitle>
+          <CardDescription>
+            Complete list of products with stock levels and pricing
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search products, brands, categories..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 "
               />
             </div>
             <div className="flex gap-2">
@@ -460,22 +442,19 @@ export default function InventoryPage() {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Products Table */}
-      <Card className="rounded-sm">
-        <CardHeader>
-          <CardTitle>Product Inventory</CardTitle>
-          <CardDescription>
-            Complete list of products with stock levels and pricing
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+            <Button onClick={() => {
+              setEditingProduct(null);
+              resetForm();
+              setShowAddDialog(true);
+            }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+          </div>
           <DataTable
             data={filteredProducts}
             columns={productColumns}
-            searchPlaceholder="Search products..."
+            searchPlaceholder=""
             pageSize={15}
           />
         </CardContent>
@@ -525,7 +504,7 @@ export default function InventoryPage() {
               </div>
               <div>
                 <Label htmlFor="type">Product Type *</Label>
-                <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
+                <Select value={formData.type} onValueChange={(value: 'branded_packet' | 'loose_weight' | 'unit_based') => setFormData({ ...formData, type: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -595,8 +574,10 @@ export default function InventoryPage() {
               />
             </div>
 
+
+
             {/* Product Variants */}
-            {formData.type === 'branded_packet' && (
+            {(formData.type === 'branded_packet' || formData.type === 'unit_based') && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label>Product Variants</Label>

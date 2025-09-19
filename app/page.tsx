@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Package, Users, CreditCard, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+
 import { MetricCard } from '@/components/ui/metric-card';
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/contexts/AppContext';
@@ -113,8 +113,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs />
-
       <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
       <p className="text-muted-foreground">Welcome back, {store?.name || 'Admin'}! Here's an overview of your store's performance.</p>
 

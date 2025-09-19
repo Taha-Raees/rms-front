@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+
 import { useApp } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Store, CreditCard, SettingsIcon, Info } from 'lucide-react';
@@ -221,8 +221,6 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs />
-
       <h2 className="text-3xl font-bold tracking-tight">Store Settings</h2>
       <p className="text-muted-foreground">Manage your store's details, business operations, and subscription.</p>
 

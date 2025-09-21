@@ -18,7 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Initialize theme on mount to avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem('theme') as Theme || 'light';
+    const savedTheme = localStorage.getItem('theme') as Theme || 'dark';
     setTheme(savedTheme);
   }, []);
 

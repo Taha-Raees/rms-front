@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Store, Lock, Mail } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Store, Lock, Mail, ShoppingBag, Zap, Shirt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
@@ -69,108 +70,307 @@ export default function LoginPage() {
           <CardHeader>
             <CardTitle>Store Login</CardTitle>
             <CardDescription>
-              Enter your credentials to access your store management system
+              Choose your login method or explore demo stores
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Enter your email"
-                    className="pl-10"
-                    required
-                  />
+            <Tabs defaultValue="manual" className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="manual">Login</TabsTrigger>
+                <TabsTrigger value="general">General</TabsTrigger>
+                <TabsTrigger value="grocery">Grocery</TabsTrigger>
+                <TabsTrigger value="electronics">Electronics</TabsTrigger>
+                <TabsTrigger value="clothing">Clothing</TabsTrigger>
+              </TabsList>
+
+              {/* Manual Login Tab */}
+              <TabsContent value="manual">
+                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="Enter your email"
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        placeholder="Enter your password"
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Sign In'
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              {/* General Store Demo */}
+              <TabsContent value="general">
+                <div className="mt-4 space-y-4">
+                  <div className="text-center space-y-2">
+                    <Store className="h-12 w-12 mx-auto text-blue-600" />
+                    <h3 className="text-lg font-semibold">Ahmed General Store</h3>
+                    <p className="text-sm text-gray-600">General retail store demonstration</p>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div className="text-sm">
+                      <strong>Email:</strong> ahmed@store.com
+                    </div>
+                    <div className="text-sm">
+                      <strong>Password:</strong> password123
+                    </div>
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      setIsLoading(true);
+                      setError('');
+                      try {
+                        const result = await login('ahmed@store.com', 'password123');
+                        if (result.success) {
+                          router.push('/');
+                          router.refresh();
+                        } else {
+                          setError(result.error || 'Login failed');
+                        }
+                      } catch (error: any) {
+                        console.error('Login error:', error);
+                        setError(error.message || 'An error occurred during login');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Access Demo'
+                    )}
+                  </Button>
                 </div>
-              </div>
+              </TabsContent>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Enter your password"
-                    className="pl-10"
-                    required
-                  />
+              {/* Grocery Store Demo */}
+              <TabsContent value="grocery">
+                <div className="mt-4 space-y-4">
+                  <div className="text-center space-y-2">
+                    <ShoppingBag className="h-12 w-12 mx-auto text-green-600" />
+                    <h3 className="text-lg font-semibold">Fresh Market Grocery</h3>
+                    <p className="text-sm text-gray-600">Complete grocery store experience</p>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div className="text-sm">
+                      <strong>Email:</strong> grocery@store.com
+                    </div>
+                    <div className="text-sm">
+                      <strong>Password:</strong> password123
+                    </div>
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      setIsLoading(true);
+                      setError('');
+                      try {
+                        const result = await login('grocery@store.com', 'password123');
+                        if (result.success) {
+                          router.push('/');
+                          router.refresh();
+                        } else {
+                          setError(result.error || 'Login failed');
+                        }
+                      } catch (error: any) {
+                        console.error('Login error:', error);
+                        setError(error.message || 'An error occurred during login');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Access Demo'
+                    )}
+                  </Button>
                 </div>
-              </div>
+              </TabsContent>
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+              {/* Electronics Store Demo */}
+              <TabsContent value="electronics">
+                <div className="mt-4 space-y-4">
+                  <div className="text-center space-y-2">
+                    <Zap className="h-12 w-12 mx-auto text-yellow-600" />
+                    <h3 className="text-lg font-semibold">Tech Hub Electronics</h3>
+                    <p className="text-sm text-gray-600">Advanced electronics inventory</p>
+                  </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-            </form>
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div className="text-sm">
+                      <strong>Email:</strong> electronics@store.com
+                    </div>
+                    <div className="text-sm">
+                      <strong>Password:</strong> password123
+                    </div>
+                  </div>
 
-            <div className="mt-4 space-y-2 text-center">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full bg-gray-50 hover:bg-gray-100"
-                onClick={async () => {
-                  setFormData({
-                    email: 'ahmed@store.com',
-                    password: 'password123'
-                  });
-                  setError('');
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
 
-                  try {
-                    const result = await login('ahmed@store.com', 'password123');
-                    if (result.success) {
-                      router.push('/');
-                      router.refresh();
-                    } else {
-                      setError(result.error || 'Login failed');
-                    }
-                  } catch (error: any) {
-                    console.error('Login error:', error);
-                    setError(error.message || 'An error occurred during login');
-                  }
-                }}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Demo Login...
-                  </>
-                ) : (
-                  'Demo Login (Quick Access)'
-                )}
-              </Button>
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      setIsLoading(true);
+                      setError('');
+                      try {
+                        const result = await login('electronics@store.com', 'password123');
+                        if (result.success) {
+                          router.push('/');
+                          router.refresh();
+                        } else {
+                          setError(result.error || 'Login failed');
+                        }
+                      } catch (error: any) {
+                        console.error('Login error:', error);
+                        setError(error.message || 'An error occurred during login');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Access Demo'
+                    )}
+                  </Button>
+                </div>
+              </TabsContent>
 
-              <Button
-                variant="link"
-                onClick={() => router.push('/admin-login')}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                System Manager Login
-              </Button>
-            </div>
+              {/* Clothing Store Demo */}
+              <TabsContent value="clothing">
+                <div className="mt-4 space-y-4">
+                  <div className="text-center space-y-2">
+                    <Shirt className="h-12 w-12 mx-auto text-pink-600" />
+                    <h3 className="text-lg font-semibold">Fashion Hub</h3>
+                    <p className="text-sm text-gray-600">Fashion retail showcase</p>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div className="text-sm">
+                      <strong>Email:</strong> clothing@store.com
+                    </div>
+                    <div className="text-sm">
+                      <strong>Password:</strong> password123
+                    </div>
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      setIsLoading(true);
+                      setError('');
+                      try {
+                        const result = await login('clothing@store.com', 'password123');
+                        if (result.success) {
+                          router.push('/');
+                          router.refresh();
+                        } else {
+                          setError(result.error || 'Login failed');
+                        }
+                      } catch (error: any) {
+                        console.error('Login error:', error);
+                        setError(error.message || 'An error occurred during login');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Access Demo'
+                    )}
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>

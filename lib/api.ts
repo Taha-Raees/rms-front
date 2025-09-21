@@ -349,6 +349,22 @@ export const analyticsApi = {
     const response = await apiFetch(`${API_BASE_URL}/analytics/dashboard`);
     return handleResponse<ApiResponse<any>>(response);
   },
+
+  // Advanced Analytics APIs
+  getFinancialAnalytics: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/analytics/advanced/financial`);
+    return handleResponse<ApiResponse<any>>(response);
+  },
+
+  getProductAnalytics: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/analytics/advanced/product`);
+    return handleResponse<ApiResponse<any>>(response);
+  },
+
+  getOperationalAnalytics: async () => {
+    const response = await apiFetch(`${API_BASE_URL}/analytics/advanced/operational`);
+    return handleResponse<ApiResponse<any>>(response);
+  },
 };
 
 // Type exports for convenience

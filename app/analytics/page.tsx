@@ -5,29 +5,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { LineChart, BarChart, DollarSign, ShoppingCart, Users, TrendingUp, TrendingDown, Package, AlertTriangle } from 'lucide-react';
+import { DollarSign, ShoppingCart, Users, TrendingUp, TrendingDown, Package, AlertTriangle, Clock, BarChart3 } from 'lucide-react';
 
-import { MetricCard } from '@/components/ui/metric-card';
+import {
+  AdvancedMetricCard,
+  RevenueTrendChart,
+  PaymentMethodChart,
+  ProductPerformanceChart,
+  CustomerSegmentChart,
+  HourlySalesPatternChart,
+  WeeklySalesPatternChart,
+  ProfitMarginChart
+} from '@/components/analytics/AdvancedCharts';
+
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDeviceAdaptive } from '@/hooks/use-device-adaptive';
 import { MobileAnalyticsManager } from '@/components/mobile/MobileAnalyticsManager';
 import { analyticsApi } from '@/lib/api';
-
-// Import Recharts components
-import {
-  LineChart as RechartsLineChart,
-  BarChart as RechartsBarChart,
-  Line,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts';
 
 export default function AnalyticsPage() {
   const { toast } = useToast();
@@ -36,61 +32,45 @@ export default function AnalyticsPage() {
   const { store } = state;
 
   const [loading, setLoading] = useState(true);
-  const [totalSales, setTotalSales] = useState(0);
-  const [totalOrders, setTotalOrders] = useState(0);
-  const [topCategory, setTopCategory] = useState('');
-  const [salesTrendValue, setSalesTrendValue] = useState('');
-  const [salesTrendPositive, setSalesTrendPositive] = useState(true);
-  const [salesData, setSalesData] = useState<any[]>([]);
-  const [productSalesData, setProductSalesData] = useState<any[]>([]);
+  const [financialData, setFinancialData] = useState<any>(null);
+  const [customerData, setCustomerData] = useState<any>(null);
+  const [productData, setProductData] = useState<any>(null);
+  const [operationalData, setOperationalData] = useState<any>(null);
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'financial' | 'products' | 'operational'>('overview');
 
   useEffect(() => {
-    fetchAnalyticsData();
+    fetchAllAnalyticsData();
   }, []);
 
-  const fetchAnalyticsData = async () => {
+  const fetchAllAnalyticsData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch analytics data from API
-      const result = await analyticsApi.getDashboardData();
-      
-      if (result.success && result.data) {
-        const data = result.data;
-        
-        setTotalSales(data.totalRevenue || 0);
-        setTotalOrders(data.totalOrders || 0);
-        setTopCategory(data.topCategory || '');
-        
-        // Calculate sales trend (simplified)
-        setSalesTrendValue('+0%');
-        setSalesTrendPositive(true);
 
-        // Process sales data for charts
-        if (data.salesByMonth) {
-          const chartData = data.salesByMonth.map((item: any) => ({
-            month: new Date(item.month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            totalSales: parseFloat(item.totalsales) || 0,
-            orderCount: parseInt(item.ordercount) || 0
-          }));
-          setSalesData(chartData);
-        }
+      const [
+        financialResult,
+        productResult,
+        operationalResult
+      ] = await Promise.all([
+        analyticsApi.getFinancialAnalytics(),
+        analyticsApi.getProductAnalytics(),
+        analyticsApi.getOperationalAnalytics()
+      ]);
 
-        // Process product sales data for charts
-        if (data.productSalesDistribution) {
-          const productData = data.productSalesDistribution.map((item: any) => ({
-            name: item.name,
-            totalQuantitySold: parseInt(item.totalquantitysold) || 0,
-            totalRevenue: parseFloat(item.totalrevenue) || 0
-          }));
-          setProductSalesData(productData);
-        }
+      if (financialResult.success) {
+        setFinancialData(financialResult.data);
+      }
+      if (productResult.success) {
+        setProductData(productResult.data);
+      }
+      if (operationalResult.success) {
+        setOperationalData(operationalResult.data);
       }
     } catch (error) {
-      console.error('Failed to fetch analytics data:', error);
+      console.error('Failed to fetch advanced analytics data:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch analytics data",
+        description: "Failed to fetch advanced analytics data",
         variant: "destructive",
       });
     } finally {
@@ -105,196 +85,431 @@ export default function AnalyticsPage() {
     return <MobileAnalyticsManager />;
   }
 
+  const renderOverviewTab = () => {
+    if (!financialData?.summary) return null;
+
+    return (
+      <div className="space-y-6">
+        {/* Key Financial Metrics */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <AdvancedMetricCard
+            title="Total Revenue"
+            value={`PKR ${financialData.summary.totalRevenue.toLocaleString()}`}
+            description="Overall sales generated"
+            icon={DollarSign}
+          />
+          <AdvancedMetricCard
+            title="Total Profit"
+            value={`PKR ${financialData.summary.totalProfit.toLocaleString()}`}
+            description="Net profit after costs"
+            icon={TrendingUp}
+            trend={{
+              value: `${financialData.summary.profitMargin.toFixed(1)}% margin`,
+              isPositive: financialData.summary.profitMargin > 0
+            }}
+          />
+          <AdvancedMetricCard
+            title="Product Categories"
+            value={productData?.productPerformance?.reduce((unique: Set<string>, product: any) => unique.add(product.category), new Set()).size || 0}
+            description="Different product categories"
+            icon={Package}
+          />
+          <AdvancedMetricCard
+            title="Top Products"
+            value={productData?.productPerformance?.length || 0}
+            description="Revenue-generating products"
+            icon={Package}
+          />
+        </div>
+
+        {/* Key Charts Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {financialData.monthlyPnL && (
+            <ProfitMarginChart
+              data={financialData.monthlyPnL}
+              title="Monthly P&L Overview"
+              height={300}
+            />
+          )}
+          {operationalData?.dailySales && (
+            <WeeklySalesPatternChart
+              data={operationalData.dailySales}
+              title="Weekly Sales Patterns"
+              height={300}
+            />
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {financialData.revenueByPaymentMethod && (
+            <PaymentMethodChart
+              data={financialData.revenueByPaymentMethod}
+              title="Revenue by Payment Type"
+              height={300}
+            />
+          )}
+          {productData?.productPerformance && (
+            <ProductPerformanceChart
+              data={productData.productPerformance}
+              title="Top Product Performance"
+              height={300}
+            />
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderFinancialTab = () => {
+    if (!financialData) return <div>No financial data available</div>;
+
+    return (
+      <div className="space-y-6">
+        {/* Financial Summary */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <AdvancedMetricCard
+            title="Total Revenue"
+            value={`PKR ${financialData.summary.totalRevenue.toLocaleString()}`}
+            icon={DollarSign}
+          />
+          <AdvancedMetricCard
+            title="Total Cost"
+            value={`PKR ${financialData.summary.totalCost.toLocaleString()}`}
+            icon={TrendingDown}
+          />
+          <AdvancedMetricCard
+            title="Net Profit"
+            value={`PKR ${financialData.summary.totalProfit.toLocaleString()}`}
+            icon={TrendingUp}
+            trend={{
+              value: `${financialData.summary.profitMargin.toFixed(1)}% margin`,
+              isPositive: financialData.summary.profitMargin > 0
+            }}
+          />
+        </div>
+
+        {/* Financial Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {financialData.monthlyPnL && (
+            <ProfitMarginChart
+              data={financialData.monthlyPnL}
+              title="Monthly Profit & Loss"
+              height={350}
+            />
+          )}
+          {financialData.revenueTrends && (
+            <RevenueTrendChart
+              data={financialData.revenueTrends}
+              title="Daily Revenue Trends"
+              height={350}
+            />
+          )}
+        </div>
+
+        {financialData.revenueByPaymentMethod && (
+          <PaymentMethodChart
+            data={financialData.revenueByPaymentMethod}
+            title="Revenue Distribution by Payment Method"
+            height={400}
+          />
+        )}
+      </div>
+    );
+  };
+
+  const renderCustomerTab = () => {
+    if (!customerData) return <div>No customer data available</div>;
+
+    return (
+      <div className="space-y-6">
+        {/* Customer Summary */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <AdvancedMetricCard
+            title="Total Customers"
+            value={customerData.customerLTV?.length || 0}
+            description="Unique customers tracked"
+            icon={Users}
+          />
+          <AdvancedMetricCard
+            title="Customer Segments"
+            value={customerData.customerSegments?.length || 0}
+            description="Different customer tiers"
+            icon={Users}
+          />
+          <AdvancedMetricCard
+            title="VIP Customers"
+            value={customerData.customerSegments?.find((s: any) => s.segment === 'VIP')?.customerCount || 0}
+            description="High-value customers"
+            icon={TrendingUp}
+          />
+        </div>
+
+        {/* Customer Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {customerData.customerSegments && (
+            <CustomerSegmentChart
+              data={customerData.customerSegments}
+              title="Customer Segmentation Analysis"
+              height={350}
+            />
+          )}
+          {customerData.customerSegments && (
+            <Card className="rounded-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Customer Segment Breakdown
+                </CardTitle>
+                <CardDescription>Value distribution across customer segments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {customerData.customerSegments.map((segment: any) => (
+                    <div key={segment.segment} className="flex items-center justify-between p-3 border rounded">
+                      <div>
+                        <div className="font-medium">{segment.segment}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {segment.customerCount} customers
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">
+                          PKR {segment.totalRevenue.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Avg: PKR {(segment.avgCustomerValue).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Top Customers */}
+        {customerData.customerLTV && (
+          <Card className="rounded-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Top Customers by Lifetime Value
+              </CardTitle>
+              <CardDescription>Most valuable customers based on total spending</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {customerData.customerLTV.slice(0, 10).map((customer: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-3 hover:bg-muted rounded">
+                    <div className="font-medium">{customer.customerName || 'Anonymous'}</div>
+                    <div className="text-right">
+                      <div className="font-semibold">
+                        PKR {customer.totalSpent.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {customer.orderCount} orders • Avg: PKR {customer.avgOrderValue.toFixed(0)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  const renderProductTab = () => {
+    if (!productData) return <div>No product data available</div>;
+
+    return (
+      <div className="space-y-6">
+        {/* Product Summary */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <AdvancedMetricCard
+            title="Total Products"
+            value={productData.productPerformance?.length || 0}
+            description="Products with performance data"
+            icon={Package}
+          />
+          <AdvancedMetricCard
+            title="Top Product Revenue"
+            value={`PKR ${productData.productPerformance?.[0]?.totalRevenue.toLocaleString() || '0'}`}
+            description="Best selling product"
+            icon={TrendingUp}
+          />
+          <AdvancedMetricCard
+            title="Avg Profit Margin"
+            value={`${productData.productPerformance?.reduce((acc: number, p: any) =>
+              acc + p.profitMargin, 0) / (productData.productPerformance?.length || 1)
+            }%`}
+            description="Overall product profitability"
+            icon={TrendingUp}
+          />
+        </div>
+
+        {/* Product Charts */}
+        {productData.productPerformance && (
+          <ProductPerformanceChart
+            data={productData.productPerformance}
+            title="Product Performance by Revenue & Profit"
+            height={400}
+          />
+        )}
+
+        {/* Inventory Turnover */}
+        {productData.inventoryTurnover && (
+          <Card className="rounded-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Inventory Turnover Analysis
+              </CardTitle>
+              <CardDescription>Product movement efficiency (sold units / current stock)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {productData.inventoryTurnover.slice(0, 15).map((product: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-3 hover:bg-muted rounded">
+                    <div className="font-medium">{product.name}</div>
+                    <div className="text-right">
+                      <div className="font-semibold">
+                        Turnover: {product.turnoverRatio.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Stock: {product.currentStock} • Sold: {product.totalSoldMonth}
+                        {product.daysOfInventory && ` • Days: ${product.daysOfInventory.toFixed(0)}`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  const renderOperationalTab = () => {
+    if (!operationalData) return <div>No operational data available</div>;
+
+    return (
+      <div className="space-y-6">
+        {/* Operational Summary */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <AdvancedMetricCard
+            title="Peak Hour Sales"
+            value={`${
+              operationalData.hourlySales?.reduce((max: any, hour: any) =>
+                hour.orderCount > max.orderCount ? hour : max, operationalData.hourlySales[0])?.hour || 0
+            }:00`}
+            description="Busiest sales hour"
+            icon={Clock}
+          />
+          <AdvancedMetricCard
+            title="Busiest Day"
+            value={`${
+              operationalData.dailySales?.reduce((max: any, day: any) =>
+                day.orderCount > max.orderCount ? day : max, operationalData.dailySales[0])?.dayName || 'N/A'
+            }`}
+            description="Most active day of week"
+            icon={TrendingUp}
+          />
+          <AdvancedMetricCard
+            title="Daily Patterns"
+            value={operationalData.dailySales?.length || 7}
+            description="Days tracked"
+            icon={BarChart3}
+          />
+        </div>
+
+        {/* Operational Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {operationalData.hourlySales && (
+            <HourlySalesPatternChart
+              data={operationalData.hourlySales}
+              title="Hourly Sales Pattern"
+              height={350}
+            />
+          )}
+          {operationalData.dailySales && (
+            <WeeklySalesPatternChart
+              data={operationalData.dailySales}
+              title="Weekly Sales Pattern"
+              height={350}
+            />
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Desktop view
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h2>
-      <p className="text-muted-foreground">Gain insights into your store's performance and make data-driven decisions.</p>
-
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Total Revenue"
-          value={`${store?.currencySymbol || 'PKR'} ${totalSales.toLocaleString()}`}
-          description="Overall sales generated"
-          icon={DollarSign}
-          trend={{ value: salesTrendValue, isPositive: salesTrendPositive }}
-          className="bg-white shadow-sm"
-        />
-        <MetricCard
-          title="Orders Completed"
-          value={totalOrders}
-          description="Total successful transactions"
-          icon={ShoppingCart}
-          trend={{ value: '+0%', isPositive: true }}
-          className="bg-white shadow-sm"
-        />
-        <MetricCard
-          title="Top Category"
-          value={topCategory}
-          description="Best performing product category"
-          icon={Package}
-          className="bg-white shadow-sm"
-        />
-        <MetricCard
-          title="Avg. Order Value"
-          value={`${store?.currencySymbol || 'PKR'} ${(totalOrders > 0 ? (totalSales / totalOrders).toFixed(2) : '0.00')}`}
-          description="Average amount per order"
-          icon={TrendingUp}
-          className="bg-white shadow-sm"
-        />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Advanced Analytics</h2>
+          <p className="text-muted-foreground">Comprehensive business intelligence and performance insights.</p>
+        </div>
+        <Button variant="outline" onClick={fetchAllAnalyticsData} disabled={loading}>
+          {loading ? 'Loading...' : 'Refresh Data'}
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales Over Time Chart */}
-        <Card className="rounded-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LineChart className="h-5 w-5" />
-              Sales Over Time
-            </CardTitle>
-            <CardDescription>Monthly revenue trends</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="h-64 bg-muted rounded animate-pulse flex items-center justify-center">
-                <p className="text-muted-foreground">Loading chart...</p>
-              </div>
-            ) : salesData.length > 0 ? (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsLineChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`PKR ${Number(value).toLocaleString()}`, 'Sales']} />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="totalSales" 
-                      stroke="#8884d8" 
-                      name="Total Sales"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </RechartsLineChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="h-64 flex items-center justify-center">
-                <p className="text-muted-foreground">No sales data available</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Product Sales Distribution Chart */}
-        <Card className="rounded-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart className="h-5 w-5" />
-              Product Sales Distribution
-            </CardTitle>
-            <CardDescription>Top selling products by units</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="h-64 bg-muted rounded animate-pulse flex items-center justify-center">
-                <p className="text-muted-foreground">Loading chart...</p>
-              </div>
-            ) : productSalesData.length > 0 ? (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart data={productSalesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [Number(value).toLocaleString(), 'Quantity']} />
-                    <Legend />
-                    <Bar 
-                      dataKey="totalQuantitySold" 
-                      fill="#8884d8" 
-                      name="Units Sold"
-                    />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="h-64 flex items-center justify-center">
-                <p className="text-muted-foreground">No product sales data available</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 bg-muted p-1 rounded-lg">
+        {[
+          { id: 'overview', label: 'Overview', icon: BarChart3 },
+          { id: 'financial', label: 'Financial', icon: DollarSign },
+          { id: 'products', label: 'Products', icon: Package },
+          { id: 'operational', label: 'Operations', icon: Clock }
+        ].map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-background shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="font-medium">{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Additional Analytics Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="rounded-sm">
-          <CardHeader>
-            <CardTitle>Top Selling Products</CardTitle>
-            <CardDescription>Best performing items by revenue</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-8 bg-muted rounded animate-pulse"></div>
-                ))}
-              </div>
-            ) : productSalesData.length > 0 ? (
-              <div className="space-y-3">
-                {productSalesData.slice(0, 5).map((product, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 hover:bg-muted rounded">
-                    <div className="font-medium text-sm">{product.name}</div>
-                    <div className="text-right">
-                      <div className="font-semibold text-sm">
-                        {store?.currencySymbol || 'PKR'} {product.totalRevenue.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {product.totalQuantitySold} units
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No product data available</p>
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card className="rounded-sm">
-          <CardHeader>
-            <CardTitle>Category Performance</CardTitle>
-            <CardDescription>Sales by product category</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-8 bg-muted rounded animate-pulse"></div>
-                ))}
-              </div>
-            ) : productSalesData.length > 0 ? (
-              <div className="space-y-3">
-                {productSalesData.slice(0, 5).map((product, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 hover:bg-muted rounded">
-                    <div className="font-medium text-sm">{product.name}</div>
-                    <div className="text-right">
-                      <div className="font-semibold text-sm">
-                        {store?.currencySymbol || 'PKR'} {product.totalRevenue.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No category data available</p>
-            )}
-          </CardContent>
-        </Card>
+      {/* Tab Content */}
+      <div className="min-h-[600px]">
+        {loading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="rounded-sm">
+                <CardHeader>
+                  <div className="h-6 bg-muted rounded animate-pulse"></div>
+                  <div className="h-4 bg-muted rounded animate-pulse w-2/3"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 bg-muted rounded animate-pulse"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <>
+            {activeTab === 'overview' && renderOverviewTab()}
+            {activeTab === 'financial' && renderFinancialTab()}
+            {activeTab === 'products' && renderProductTab()}
+            {activeTab === 'operational' && renderOperationalTab()}
+          </>
+        )}
       </div>
     </div>
   );

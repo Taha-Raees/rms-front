@@ -43,9 +43,9 @@ export default function DashboardPage() {
       
       // Fetch data from APIs
       const [analyticsResult, ordersResult, inventoryResult] = await Promise.all([
-        analyticsApi.getDashboardData(storeId),
-        ordersApi.getAll(storeId),
-        inventoryApi.getStock(),
+        analyticsApi.getDashboardData(),
+        ordersApi.getAll(),
+        inventoryApi.getAlerts(),
       ]);
 
       if (analyticsResult.success && analyticsResult.data) {

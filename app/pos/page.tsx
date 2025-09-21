@@ -609,15 +609,13 @@ export default function POSPage() {
                         {hasActiveVariants ? (
                           (() => {
                             const variants = product.variants?.filter(v => !v.deletedAt) || [];
-                            const gridColsClass = variants.length === 1 ? "grid-cols-1" :
-                                                 variants.length === 2 ? "grid-cols-2" :
-                                                 "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4";
+
                             return (
-                              <div className={`grid ${gridColsClass} gap-2`}>
-                                {variants.map(variant => (
+                              <div className="flex flex-wrap gap-2">
+                                {variants.map((variant) => (
                                   <Card
                                     key={variant.id}
-                                    className={`p-3 hover:shadow-sm rounded-sm cursor-pointer transition-all relative ${
+                                    className={`p-3 hover:shadow-sm rounded-sm cursor-pointer transition-all relative flex-1 min-w-[120px] ${
                                       variant.stock === 0
                                         ? 'cursor-not-allowed opacity-50 blur-[0.8px] hover:shadow-sm'
                                         : 'hover:shadow-md'
@@ -632,12 +630,12 @@ export default function POSPage() {
                                     <div className="flex items-center justify-between">
                                       <div className="flex-1">
                                         <h4 className="font-medium text-sm">{variant.name}</h4>
-                                      <div className="text-xs text-muted-foreground mt-1">
-                                        <div className="price-text">PKR {variant.price}</div>
-                                        {variant.weight && (
-                                          <div className="text-xs">{variant.weight} {variant.weightUnit}</div>
-                                        )}
-                                      </div>
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                          <div className="price-text">PKR {variant.price}</div>
+                                          {variant.weight && (
+                                            <div className="text-xs">{variant.weight} {variant.weightUnit}</div>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   </Card>

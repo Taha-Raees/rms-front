@@ -450,18 +450,9 @@ export default function AnalyticsPage() {
   // Desktop view
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Advanced Analytics</h2>
-          <p className="text-muted-foreground">Comprehensive business intelligence and performance insights.</p>
-        </div>
-        <Button variant="outline" onClick={fetchAllAnalyticsData} disabled={loading}>
-          {loading ? 'Loading...' : 'Refresh Data'}
-        </Button>
-      </div>
-
       {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-muted p-1 rounded-lg">
+      <div className="flex items-center justify-between bg-muted p-1 rounded-lg">
+        <div className="flex space-x-1">
         {[
           { id: 'overview', label: 'Overview', icon: BarChart3 },
           { id: 'financial', label: 'Financial', icon: DollarSign },
@@ -484,6 +475,10 @@ export default function AnalyticsPage() {
             </button>
           );
         })}
+        </div>
+        <Button variant="outline" onClick={fetchAllAnalyticsData} disabled={loading}>
+          {loading ? 'Loading...' : 'Refresh Data'}
+        </Button>
       </div>
 
       {/* Tab Content */}

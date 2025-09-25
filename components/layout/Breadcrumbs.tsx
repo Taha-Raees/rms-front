@@ -56,26 +56,7 @@ const pathLabels: Record<string, string> = {
   'settings': 'Settings',
 };
 
-const getDefaultActions = (currentPageKey: string): BreadcrumbAction[] => {
-  switch (currentPageKey) {
-    case 'orders':
-      return [
-        { label: 'Date Range', icon: Calendar, variant: 'outline' as const },
-        { label: 'Filters', icon: Filter, variant: 'outline' as const },
-      ];
-    case 'analytics':
-      return [
-        { label: 'Export', icon: Download, variant: 'outline' as const },
-        { label: 'Settings', icon: Settings, variant: 'outline' as const },
-      ];
-    case 'customers':
-      return [
-        { label: 'Add Customer', icon: Plus, variant: 'default' as const },
-      ];
-    default:
-      return [];
-  }
-};
+
 
 export const BreadcrumbActionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [actions, setActionsState] = React.useState<Record<string, BreadcrumbAction[]>>({});
@@ -111,10 +92,7 @@ export function Breadcrumbs() {
     });
   });
 
-  // Get actions for current path from context or defaults
-  const currentPageKey = pathSegments[pathSegments.length - 1] || '';
-  const customPageActions = customActions ? customActions[currentPageKey] : undefined;
-  const pageActions = customPageActions || getDefaultActions(currentPageKey);
+ 
 
   return (
     <div className="flex items-center justify-between">
@@ -144,32 +122,7 @@ export function Breadcrumbs() {
         ))}
       </nav>
 
-      {/* Action Buttons */}
-      {pageActions.length > 0 && (
-        <div className="flex items-center gap-2">
-          {pageActions.map((action: BreadcrumbAction, index: number) => (
-            <Button
-              key={index}
-              variant={action.variant || 'outline'}
-              size="sm"
-              onClick={action.onClick}
-              asChild={!!action.href}
-            >
-              {action.href ? (
-                <Link href={action.href}>
-                  <action.icon className="h-4 w-4 mr-2" />
-                  {action.label}
-                </Link>
-              ) : (
-                <>
-                  <action.icon className="h-4 w-4 mr-2" />
-                  {action.label}
-                </>
-              )}
-            </Button>
-          ))}
-        </div>
-      )}
+      
     </div>
   );
 }

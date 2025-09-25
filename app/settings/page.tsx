@@ -15,47 +15,51 @@ import {
 } from '@/components/ui/select';
 
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Store, CreditCard, SettingsIcon, Info } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
-// Interfaces matching the backend Prisma schema
+// Interfaces matching the backend Prisma schema (with settings object)
 interface Store {
   id: string;
   name: string;
   businessType: string;
   currency: string;
   currencySymbol: string;
-  settings: {
-    lowStockAlerts: boolean;
-    autoReorder: boolean;
-    taxRate: number;
-    discountEnabled: boolean;
-    multiplePaymentMethods: boolean;
-    receiptPrinting: boolean;
-    barcodeScanning: boolean;
+  // Settings as object with individual boolean fields (matching API response)
+  settings?: {
+    lowStockAlerts?: boolean;
+    autoReorder?: boolean;
+    discountEnabled?: boolean;
+    multiplePaymentMethods?: boolean;
+    receiptPrinting?: boolean;
+    barcodeScanning?: boolean;
   };
-  subscriptionPaymentMethod?: string; // Made optional
-  owner: {
+  // Tax rate separate field
+  taxRate?: number;
+  subscriptionPaymentMethod?: string;
+  // Owner info from relation (may not be included in store response)
+  owner?: {
     name?: string;
     email?: string;
   };
-  contact: {
-    phone?: string;
-    email?: string;
-  };
-  address: {
-    street?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-  };
-  subscription?: { // Made optional to prevent runtime errors
+  // Contact fields as flat strings
+  phone?: string;
+  email?: string;
+  website?: string;
+  // Address fields as flat strings
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  subscription?: {
     plan: string;
     status: string;
     expiresAt?: string;
   };
-  isActive?: boolean; // Added for status display
+  isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,35 +69,37 @@ interface StoreSettingsFormData {
   businessType: string;
   currency: string;
   currencySymbol: string;
-  settings: {
-    lowStockAlerts: boolean;
-    autoReorder: boolean;
-    taxRate: number;
-    discountEnabled: boolean;
-    multiplePaymentMethods: boolean;
-    receiptPrinting: boolean;
-    barcodeScanning: boolean;
-  };
+  // Settings as individual boolean fields
+  lowStockAlerts: boolean;
+  autoReorder: boolean;
+  discountEnabled: boolean;
+  multiplePaymentMethods: boolean;
+  receiptPrinting: boolean;
+  barcodeScanning: boolean;
+  // Tax rate separate field
+  taxRate: number;
   subscriptionPaymentMethod: string;
+  // Owner info
   owner?: {
     name?: string;
     email?: string;
   };
-  contact?: {
-    phone?: string;
-    email?: string;
-  };
-  address?: {
-    street?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-  };
+  // Contact fields as flat strings
+  phone?: string;
+  email?: string;
+  // Address fields as flat strings
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
 }
 
 export default function SettingsPage() {
   const { state, dispatch } = useApp();
   const { store } = state;
+  const { state: authState } = useAuth();
+  const { user } = authState;
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<StoreSettingsFormData>({
@@ -101,19 +107,22 @@ export default function SettingsPage() {
     businessType: '',
     currency: '',
     currencySymbol: '',
-    settings: {
-      lowStockAlerts: false,
-      autoReorder: false,
-      taxRate: 0,
-      discountEnabled: false,
-      multiplePaymentMethods: false,
-      receiptPrinting: false,
-      barcodeScanning: false,
-    },
+    lowStockAlerts: false,
+    autoReorder: false,
+    discountEnabled: false,
+    multiplePaymentMethods: false,
+    receiptPrinting: false,
+    barcodeScanning: false,
+    taxRate: 0,
     subscriptionPaymentMethod: '',
     owner: { name: '', email: '' },
-    contact: { phone: '', email: '' },
-    address: { street: '', city: '', state: '', postalCode: '' },
+    phone: '',
+    email: '',
+    street: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: '',
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -125,22 +134,29 @@ export default function SettingsPage() {
         businessType: store.businessType,
         currency: store.currency,
         currencySymbol: store.currencySymbol,
-        settings: {
-          lowStockAlerts: store.settings?.lowStockAlerts || false,
-          autoReorder: store.settings?.autoReorder || false,
-          taxRate: (store.settings as any)?.taxRate || 0, // Handle missing taxRate property
-          discountEnabled: store.settings?.discountEnabled || false,
-          multiplePaymentMethods: store.settings?.multiplePaymentMethods || false,
-          receiptPrinting: store.settings?.receiptPrinting || false,
-          barcodeScanning: store.settings?.barcodeScanning || false,
+        lowStockAlerts: store.settings?.lowStockAlerts || false,
+        autoReorder: store.settings?.autoReorder || false,
+        discountEnabled: store.settings?.discountEnabled || false,
+        multiplePaymentMethods: store.settings?.multiplePaymentMethods || false,
+        receiptPrinting: store.settings?.receiptPrinting || false,
+        barcodeScanning: store.settings?.barcodeScanning || false,
+        taxRate: store.taxRate || 0,
+        subscriptionPaymentMethod: store.subscriptionPaymentMethod || '',
+        // Use logged-in user info for owner, fallback to store.owner if exists
+        owner: {
+          name: store.owner?.name || '',
+          email: user?.email || store.owner?.email || ''
         },
-        subscriptionPaymentMethod: (store as any).subscriptionPaymentMethod || '',
-        owner: { ...store.owner },
-        contact: { ...store.contact },
-        address: { ...store.address },
+        phone: store.phone || '',
+        email: store.email || '',
+        street: store.street || '',
+        city: store.city || '',
+        state: store.state || '',
+        postalCode: store.postalCode || '',
+        country: store.country || '',
       });
     }
-  }, [store]);
+  }, [store, user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -160,20 +176,14 @@ export default function SettingsPage() {
   const handleSettingsToggleChange = (id: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      settings: {
-        ...prev.settings,
-        [id]: checked,
-      },
+      [id]: checked,
     }));
   };
 
   const handleTaxRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
-      settings: {
-        ...prev.settings,
-        taxRate: parseFloat(e.target.value) || 0,
-      },
+      taxRate: parseFloat(e.target.value) || 0,
     }));
   };
 
@@ -221,9 +231,6 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold tracking-tight">Store Settings</h2>
-      <p className="text-muted-foreground">Manage your store's details, business operations, and subscription.</p>
-
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Store Details */}
         <Card className="rounded-sm"> {/* Added rounded-sm */}
@@ -278,39 +285,75 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {/* Contact Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
-                  value={formData.contact?.phone || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    contact: { ...prev.contact, phone: e.target.value }
-                  }))}
+                  value={formData.phone}
+                  onChange={handleInputChange}
                 />
               </div>
               <div>
                 <Label htmlFor="email">Store Email</Label>
                 <Input
                   id="email"
-                  value={formData.contact?.email || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    contact: { ...prev.contact, email: e.target.value }
-                  }))}
+                  value={formData.email}
+                  onChange={handleInputChange}
                 />
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                value={`${formData.address?.street || ''}, ${formData.address?.city || ''}, ${formData.address?.state || ''} ${formData.address?.postalCode || ''}`}
-                disabled // Read-only, complex address editing would be in another app
-                rows={3}
-              />
+            {/* Address Fields */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="street">Street Address</Label>
+                <Input
+                  id="street"
+                  value={formData.street}
+                  onChange={handleInputChange}
+                  placeholder="123 Main Street"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="Karachi"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="state">State/Province</Label>
+                  <Input
+                    id="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    placeholder="Sindh"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="postalCode">Postal Code</Label>
+                  <Input
+                    id="postalCode"
+                    value={formData.postalCode}
+                    onChange={handleInputChange}
+                    placeholder="74000"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  value={formData.country}
+                  onChange={handleInputChange}
+                  placeholder="Pakistan"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -354,7 +397,7 @@ export default function SettingsPage() {
                 <Label htmlFor="lowStockAlerts">Low Stock Alerts</Label>
                 <Switch
                   id="lowStockAlerts"
-                  checked={formData.settings.lowStockAlerts}
+                  checked={formData.lowStockAlerts}
                   onCheckedChange={(checked) => handleSettingsToggleChange('lowStockAlerts', checked)}
                 />
               </div>
@@ -362,7 +405,7 @@ export default function SettingsPage() {
                 <Label htmlFor="autoReorder">Automatic Reorder</Label>
                 <Switch
                   id="autoReorder"
-                  checked={formData.settings.autoReorder}
+                  checked={formData.autoReorder}
                   onCheckedChange={(checked) => handleSettingsToggleChange('autoReorder', checked)}
                 />
               </div>
@@ -370,7 +413,7 @@ export default function SettingsPage() {
                 <Label htmlFor="discountEnabled">Enable Discounts</Label>
                 <Switch
                   id="discountEnabled"
-                  checked={formData.settings.discountEnabled}
+                  checked={formData.discountEnabled}
                   onCheckedChange={(checked) => handleSettingsToggleChange('discountEnabled', checked)}
                 />
               </div>
@@ -378,7 +421,7 @@ export default function SettingsPage() {
                 <Label htmlFor="multiplePaymentMethods">Multiple Payment Methods</Label>
                 <Switch
                   id="multiplePaymentMethods"
-                  checked={formData.settings.multiplePaymentMethods}
+                  checked={formData.multiplePaymentMethods}
                   onCheckedChange={(checked) => handleSettingsToggleChange('multiplePaymentMethods', checked)}
                 />
               </div>
@@ -386,7 +429,7 @@ export default function SettingsPage() {
                 <Label htmlFor="receiptPrinting">Receipt Printing</Label>
                 <Switch
                   id="receiptPrinting"
-                  checked={formData.settings.receiptPrinting}
+                  checked={formData.receiptPrinting}
                   onCheckedChange={(checked) => handleSettingsToggleChange('receiptPrinting', checked)}
                 />
               </div>
@@ -394,7 +437,7 @@ export default function SettingsPage() {
                 <Label htmlFor="barcodeScanning">Barcode Scanning</Label>
                 <Switch
                   id="barcodeScanning"
-                  checked={formData.settings.barcodeScanning}
+                  checked={formData.barcodeScanning}
                   onCheckedChange={(checked) => handleSettingsToggleChange('barcodeScanning', checked)}
                 />
               </div>
@@ -405,7 +448,7 @@ export default function SettingsPage() {
                 id="taxRate"
                 type="number"
                 step="0.01"
-                value={formData.settings.taxRate * 100} // Display as percentage
+                value={formData.taxRate * 100} // Display as percentage
                 onChange={handleTaxRateChange}
               />
             </div>

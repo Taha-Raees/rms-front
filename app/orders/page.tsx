@@ -229,9 +229,6 @@ export default function OrdersPage() {
   // Desktop view
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold tracking-tight">Order Management</h2>
-      <p className="text-muted-foreground">View and manage all customer orders.</p>
-
       <Card className="rounded-sm">
         <CardHeader>
           <CardTitle>Order List</CardTitle>

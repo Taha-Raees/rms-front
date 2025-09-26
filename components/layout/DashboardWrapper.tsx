@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import FloatingChat from '@/components/chat/FloatingChat';
 
 interface DashboardWrapperProps {
   children: React.ReactNode;
@@ -136,6 +137,7 @@ export function DashboardWrapper({ children }: DashboardWrapperProps) {
         </div>
       </div>
       <Toaster />
+      <FloatingChat />
     </SidebarProvider>
   );
 }

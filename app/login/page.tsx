@@ -57,12 +57,12 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center">
-              <Store className="h-8 w-8 text-white" />
+            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+              <Store className="h-8 w-8" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Retail Management</h1>
-          <p className="text-gray-600 mt-2">Sign in to your store dashboard</p>
+          <h1 className="text-3xl font-bold text-foreground">Retail Management</h1>
+          <p className="text-muted-foreground mt-2">Sign in to your store dashboard</p>
         </div>
 
         {/* Login Form */}
@@ -75,9 +75,8 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="manual" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="manual">Login</TabsTrigger>
-                <TabsTrigger value="general">General</TabsTrigger>
                 <TabsTrigger value="grocery">Grocery</TabsTrigger>
                 <TabsTrigger value="electronics">Electronics</TabsTrigger>
                 <TabsTrigger value="clothing">Clothing</TabsTrigger>
@@ -139,74 +138,18 @@ export default function LoginPage() {
                 </form>
               </TabsContent>
 
-              {/* General Store Demo */}
-              <TabsContent value="general">
-                <div className="mt-4 space-y-4">
-                  <div className="text-center space-y-2">
-                    <Store className="h-12 w-12 mx-auto text-blue-600" />
-                    <h3 className="text-lg font-semibold">Ahmed General Store</h3>
-                    <p className="text-sm text-gray-600">General retail store demonstration</p>
-                  </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <div className="text-sm">
-                      <strong>Email:</strong> ahmed@store.com
-                    </div>
-                    <div className="text-sm">
-                      <strong>Password:</strong> password123
-                    </div>
-                  </div>
-
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  <Button
-                    className="w-full"
-                    onClick={async () => {
-                      setIsLoading(true);
-                      setError('');
-                      try {
-                        const result = await login('ahmed@store.com', 'password123');
-                        if (result.success) {
-                          router.push('/');
-                          router.refresh();
-                        } else {
-                          setError(result.error || 'Login failed');
-                        }
-                      } catch (error: any) {
-                        console.error('Login error:', error);
-                        setError(error.message || 'An error occurred during login');
-                      } finally {
-                        setIsLoading(false);
-                      }
-                    }}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      'Access Demo'
-                    )}
-                  </Button>
-                </div>
-              </TabsContent>
 
               {/* Grocery Store Demo */}
               <TabsContent value="grocery">
                 <div className="mt-4 space-y-4">
                   <div className="text-center space-y-2">
                     <ShoppingBag className="h-12 w-12 mx-auto text-green-600" />
-                    <h3 className="text-lg font-semibold">Fresh Market Grocery</h3>
-                    <p className="text-sm text-gray-600">Complete grocery store experience</p>
+                    <h3 className="text-lg font-semibold text-foreground">Fresh Market Grocery</h3>
+                    <p className="text-sm text-muted-foreground">Complete grocery store experience</p>
                   </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
                     <div className="text-sm">
                       <strong>Email:</strong> grocery@store.com
                     </div>
@@ -260,11 +203,11 @@ export default function LoginPage() {
                 <div className="mt-4 space-y-4">
                   <div className="text-center space-y-2">
                     <Zap className="h-12 w-12 mx-auto text-yellow-600" />
-                    <h3 className="text-lg font-semibold">Tech Hub Electronics</h3>
-                    <p className="text-sm text-gray-600">Advanced electronics inventory</p>
+                    <h3 className="text-lg font-semibold text-foreground">Tech Hub Electronics</h3>
+                    <p className="text-sm text-muted-foreground">Advanced electronics inventory</p>
                   </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
                     <div className="text-sm">
                       <strong>Email:</strong> electronics@store.com
                     </div>
@@ -318,11 +261,11 @@ export default function LoginPage() {
                 <div className="mt-4 space-y-4">
                   <div className="text-center space-y-2">
                     <Shirt className="h-12 w-12 mx-auto text-pink-600" />
-                    <h3 className="text-lg font-semibold">Fashion Hub</h3>
-                    <p className="text-sm text-gray-600">Fashion retail showcase</p>
+                    <h3 className="text-lg font-semibold text-foreground">Fashion Hub</h3>
+                    <p className="text-sm text-muted-foreground">Fashion retail showcase</p>
                   </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
                     <div className="text-sm">
                       <strong>Email:</strong> clothing@store.com
                     </div>

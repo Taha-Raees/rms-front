@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Minimize2, Maximize2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { MessageCircle, X, Send, Minimize2, Maximize2, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Message {
   id: string;
@@ -13,15 +14,21 @@ interface FloatingChatProps {
   apiUrl?: string;
 }
 
-export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: FloatingChatProps) {
+export default function FloatingChat({ apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001' }: FloatingChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [size, setSize] = useState({ width: 320, height: 384 }); // Default size
+  const [isResizing, setIsResizing] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { theme } = useTheme();
 
   // Load chat history from sessionStorage on mount
   useEffect(() => {
@@ -52,6 +59,45 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsResizing(true);
+  }, []);
+
+  // Global mouse event handlers
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizing && !isMinimized) {
+        // Keep window anchored to bottom-right, just resize it
+        const newWidth = Math.max(320, window.innerWidth - 24 - e.clientX);
+        const newHeight = Math.max(200, window.innerHeight - 24 - e.clientY);
+
+        setSize({
+          width: Math.min(newWidth, window.innerWidth - 24),
+          height: Math.min(newHeight, window.innerHeight - 24),
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'nw-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, position, size, isMinimized]);
 
   const sendMessage = async () => {
     const message = inputValue.trim();
@@ -160,7 +206,7 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
       <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={toggleChat}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-105"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-105"
           aria-label="Open chat"
         >
           <MessageCircle className="w-6 h-6" />
@@ -169,13 +215,48 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
     );
   }
 
+  const chatClasses = theme === 'dark'
+    ? 'bg-gray-800 border-gray-600 text-white'
+    : 'bg-white border-gray-200 text-gray-900';
+
+  const headerClasses = theme === 'dark'
+    ? 'bg-primary border-gray-600'
+    : 'bg-primary border-gray-200';
+
+  const messageClasses = {
+    user: 'bg-primary text-primary-foreground',
+    assistant: theme === 'dark'
+      ? 'bg-gray-700 text-gray-100'
+      : 'bg-gray-100 text-gray-800',
+  };
+
+  const inputClasses = theme === 'dark'
+    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary focus:border-gray-500'
+    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-primary focus:border-primary';
+
+  const buttonClasses = theme === 'dark'
+    ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 text-gray-300'
+    : 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-600';
+
   return (
-    <div className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ease-in-out ${
-      isMinimized ? 'w-80 h-16' : 'w-80 h-96'
-    }`}>
-      <div className="bg-white rounded-lg shadow-xl border border-gray-200 flex flex-col h-full">
+    <div
+      ref={containerRef}
+      className={`fixed z-50 rounded-lg shadow-xl border transition-all duration-300 ease-in-out ${
+        theme === 'dark' ? 'shadow-gray-900' : 'shadow-black/20'
+      } ${chatClasses}`}
+      style={{
+        width: size.width,
+        height: isMinimized ? 64 : size.height,
+        left: position.x || undefined,
+        top: position.y || undefined,
+        bottom: position.x === 0 && position.y === 0 ? 24 : undefined,
+        right: position.x === 0 && position.y === 0 ? 24 : undefined,
+      }}
+
+    >
+      <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-blue-600 text-white rounded-t-lg">
+        <div className={`flex items-center justify-between p-3 border-b ${headerClasses} text-primary-foreground rounded-t-lg`}>
           <div className="flex items-center space-x-2">
             <MessageCircle className="w-5 h-5" />
             <h3 className="font-semibold text-sm">AI Assistant</h3>
@@ -183,7 +264,7 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
           <div className="flex items-center space-x-1">
             <button
               onClick={() => setIsMinimized(!isMinimized)}
-              className="p-1 hover:bg-blue-700 rounded transition-colors"
+              className="p-1 hover:bg-primary/80 rounded transition-colors"
               aria-label={isMinimized ? 'Maximize' : 'Minimize'}
             >
               {isMinimized ? (
@@ -194,7 +275,7 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
             </button>
             <button
               onClick={toggleChat}
-              className="p-1 hover:bg-blue-700 rounded transition-colors"
+              className="p-1 hover:bg-primary/80 rounded transition-colors"
               aria-label="Close chat"
             >
               <X className="w-4 h-4" />
@@ -205,9 +286,14 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
         {!isMinimized && (
           <>
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div
+              className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide"
+              style={{ maxHeight: size.height - 140 }}
+            >
               {messages.length === 0 ? (
-                <div className="text-center text-gray-500 text-sm">
+                <div className={`text-center text-sm ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                }`}>
                   <p className="mb-2">👋 Hello! I'm your AI assistant.</p>
                   <p>Ask me questions about your store, sales trends, inventory, or any business insights!</p>
                 </div>
@@ -218,16 +304,14 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] p-3 rounded-lg text-sm ${
-                        msg.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
+                      className={`max-w-[85%] p-3 rounded-lg text-sm ${messageClasses[msg.role]}`}
                     >
                       <div className="whitespace-pre-wrap">{msg.content}</div>
                       <div
                         className={`text-xs mt-1 ${
-                          msg.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                          msg.role === 'user'
+                            ? 'text-primary-foreground/70'
+                            : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                         }`}
                       >
                         {msg.timestamp.toLocaleTimeString([], {
@@ -242,12 +326,22 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
 
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 text-gray-800 p-3 rounded-lg text-sm">
+                  <div className={`p-3 rounded-lg text-sm ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 text-gray-100'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
                     <div className="flex items-center space-x-2">
                       <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className={`w-2 h-2 rounded-full animate-bounce ${
+                          theme === 'dark' ? 'bg-gray-400' : 'bg-gray-400'
+                        }`}></div>
+                        <div className={`w-2 h-2 rounded-full animate-bounce ${
+                          theme === 'dark' ? 'bg-gray-400' : 'bg-gray-400'
+                        }`} style={{ animationDelay: '0.1s' }}></div>
+                        <div className={`w-2 h-2 rounded-full animate-bounce ${
+                          theme === 'dark' ? 'bg-gray-400' : 'bg-gray-400'
+                        }`} style={{ animationDelay: '0.2s' }}></div>
                       </div>
                       <span>Thinking...</span>
                     </div>
@@ -259,7 +353,9 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-gray-200">
+            <div className={`p-3 border-t ${
+              theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
+            }`}>
               <div className="flex space-x-2">
                 <input
                   ref={inputRef}
@@ -268,13 +364,13 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask about your store..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 ${inputClasses}`}
                   disabled={isLoading}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!inputValue.trim() || isLoading}
-                  className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                  className="p-2 bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground disabled:text-muted-foreground rounded-lg transition-colors"
                   aria-label="Send message"
                 >
                   <Send className="w-4 h-4" />
@@ -283,13 +379,31 @@ export default function FloatingChat({ apiUrl = 'http://localhost:3001' }: Float
               {messages.length > 0 && (
                 <button
                   onClick={clearHistory}
-                  className="mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                  className={`mt-2 text-xs hover:underline transition-colors ${
+                    theme === 'dark'
+                      ? 'text-gray-400 hover:text-gray-300'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 >
                   Clear history
                 </button>
               )}
             </div>
           </>
+        )}
+
+        {/* Resize Handle */}
+        {!isMinimized && (
+          <div
+            className={`absolute top-0 left-0 w-4 h-4 cursor-nw-resize ${
+              theme === 'dark'
+                ? 'text-gray-400 hover:text-gray-200'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+            onMouseDown={handleResizeMouseDown}
+          >
+            <GripVertical className="w-4 h-4" />
+          </div>
         )}
       </div>
     </div>

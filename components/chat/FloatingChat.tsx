@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageCircle, X, Send, Minimize2, Maximize2, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/contexts/ThemeContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 interface Message {
   id: string;
@@ -306,7 +309,58 @@ export default function FloatingChat({ apiUrl = process.env.NEXT_PUBLIC_API_BASE
                     <div
                       className={`max-w-[85%] p-3 rounded-lg text-sm ${messageClasses[msg.role]}`}
                     >
-                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                      <div className="prose dark:prose-invert prose-sm max-w-none prose-p:mb-4 prose-headings:mb-2">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkBreaks]}
+                          components={{
+                            table: ({ children, ...props }) => (
+                              <table className="border-collapse border border-gray-300 dark:border-gray-600 mb-4" {...props}>
+                                {children}
+                              </table>
+                            ),
+                            thead: ({ children, ...props }) => (
+                              <thead className="bg-gray-50 dark:bg-gray-700" {...props}>
+                                {children}
+                              </thead>
+                            ),
+                            tbody: ({ children, ...props }) => (
+                              <tbody {...props}>
+                                {children}
+                              </tbody>
+                            ),
+                            tr: ({ children, ...props }) => (
+                              <tr className="border-b border-gray-200 dark:border-gray-600" {...props}>
+                                {children}
+                              </tr>
+                            ),
+                            th: ({ children, ...props }) => (
+                              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold bg-gray-100 dark:bg-gray-600" {...props}>
+                                {children}
+                              </th>
+                            ),
+                            td: ({ children, ...props }) => (
+                              <td className="border border-gray-300 dark:border-gray-600 px-3 py-2" {...props}>
+                                {children}
+                              </td>
+                            ),
+                            p: ({ children, ...props }) => (
+                              <p className="mb-4 last:mb-0" {...props}>
+                                {children}
+                              </p>
+                            ),
+                            br: ({ ...props }) => (
+                              <br className="block" {...props} />
+                            ),
+                            pre: ({ children, ...props }) => (
+                              <pre className="whitespace-pre-wrap break-words" {...props}>
+                                {children}
+                              </pre>
+                            ),
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
                       <div
                         className={`text-xs mt-1 ${
                           msg.role === 'user'

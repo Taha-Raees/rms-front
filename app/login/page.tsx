@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Store, Lock, Mail, ShoppingBag, Zap, Shirt } from 'lucide-react';
+import { Loader2, Store, Lock, Mail, ShoppingBag, Zap, Shirt, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
@@ -20,6 +20,7 @@ export default function LoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -52,43 +53,45 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-              <Store className="h-8 w-8" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Retail Management</h1>
-          <p className="text-muted-foreground mt-2">Sign in to your store dashboard</p>
-        </div>
+    <div className="min-h-screen flex relative overflow-hidden">
+      {/* Background with gradient and image */}
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900"
+        style={{
+          backgroundImage: `url('/loginbg.svg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundBlendMode: 'overlay'
+        }}
+      />
 
-        {/* Login Form */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Store Login</CardTitle>
-            <CardDescription>
-              Choose your login method or explore demo stores
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      {/* Left side - Login Form */}
+      <div className="flex-1 flex items-center justify-center p-8 relative z-10">
+        <div className="w-full max-w-md h-full flex items-center justify-center">
+          <div className="bg-[#9b1f53]/10 backdrop-blur-sm p-8 shadow-2xl border border-white/20 min-h-[600px] w-full flex flex-col justify-center">
+          {/* Header */}
+          <div className="text-center mb-10">
+            <h1 className="text-4xl font-bold text-white mb-2">Retail Management</h1>
+            <p className="text-purple-200 text-lg">Sign in to your store dashboard</p>
+          </div>
+
+          {/* Login Form */}
+          
             <Tabs defaultValue="manual" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="manual">Login</TabsTrigger>
-                <TabsTrigger value="grocery">Grocery</TabsTrigger>
-                <TabsTrigger value="electronics">Electronics</TabsTrigger>
-                <TabsTrigger value="clothing">Clothing</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4 bg-white/20 mb-6">
+                <TabsTrigger value="manual" className="text-white data-[state=active]:bg-white data-[state=active]:text-purple-900">Login</TabsTrigger>
+                <TabsTrigger value="grocery" className="text-white data-[state=active]:bg-white data-[state=active]:text-purple-900">Grocery</TabsTrigger>
+                <TabsTrigger value="electronics" className="text-white data-[state=active]:bg-white data-[state=active]:text-purple-900">Electronics</TabsTrigger>
+                <TabsTrigger value="clothing" className="text-white data-[state=active]:bg-white data-[state=active]:text-purple-900">Clothing</TabsTrigger>
               </TabsList>
 
               {/* Manual Login Tab */}
               <TabsContent value="manual">
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
+                    <Label htmlFor="email" className="text-white text-sm font-medium">Email Address</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 h-5 w-5" />
                       <Input
                         id="email"
                         name="email"
@@ -96,39 +99,54 @@ export default function LoginPage() {
                         value={formData.email}
                         onChange={handleInputChange}
                         placeholder="Enter your email"
-                        className="pl-10"
+                        className="pl-12 pr-4 py-3 bg-white/20 border-white/30 text-white placeholder:text-purple-200 focus:border-white focus:ring-white"
                         required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" className="text-white text-sm font-medium">Password</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 h-5 w-5" />
                       <Input
                         id="password"
                         name="password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={handleInputChange}
                         placeholder="Enter your password"
-                        className="pl-10"
+                        className="pl-12 pr-12 py-3 bg-white/20 border-white/30 text-white placeholder:text-purple-200 focus:border-white focus:ring-white"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-300 hover:text-white"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
                     </div>
                   </div>
 
                   {error && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="bg-red-500/20 border-red-500/30 text-white">
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button
+                    type="submit"
+                    className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200"
+                    disabled={isLoading}
+                  >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         Signing in...
                       </>
                     ) : (
@@ -138,34 +156,36 @@ export default function LoginPage() {
                 </form>
               </TabsContent>
 
-
-
               {/* Grocery Store Demo */}
               <TabsContent value="grocery">
-                <div className="mt-4 space-y-4">
-                  <div className="text-center space-y-2">
-                    <ShoppingBag className="h-12 w-12 mx-auto text-green-600" />
-                    <h3 className="text-lg font-semibold text-foreground">Fresh Market Grocery</h3>
-                    <p className="text-sm text-muted-foreground">Complete grocery store experience</p>
+                <div className="space-y-6">
+                  <div className="text-center space-y-4">
+                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                      <ShoppingBag className="h-8 w-8 text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">Fresh Market Grocery</h3>
+                      <p className="text-purple-200">Complete grocery store experience</p>
+                    </div>
                   </div>
 
-                  <div className="bg-muted p-4 rounded-lg space-y-2">
-                    <div className="text-sm">
-                      <strong>Email:</strong> grocery@store.com
+                  <div className="bg-white/10 p-4 rounded-lg space-y-2">
+                    <div className="text-purple-200 text-sm">
+                      <strong className="text-white">Email:</strong> grocery@store.com
                     </div>
-                    <div className="text-sm">
-                      <strong>Password:</strong> password123
+                    <div className="text-purple-200 text-sm">
+                      <strong className="text-white">Password:</strong> password123
                     </div>
                   </div>
 
                   {error && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="bg-red-500/20 border-red-500/30 text-white">
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
 
                   <Button
-                    className="w-full"
+                    className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200"
                     onClick={async () => {
                       setIsLoading(true);
                       setError('');
@@ -188,7 +208,7 @@ export default function LoginPage() {
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         Signing in...
                       </>
                     ) : (
@@ -200,30 +220,34 @@ export default function LoginPage() {
 
               {/* Electronics Store Demo */}
               <TabsContent value="electronics">
-                <div className="mt-4 space-y-4">
-                  <div className="text-center space-y-2">
-                    <Zap className="h-12 w-12 mx-auto text-yellow-600" />
-                    <h3 className="text-lg font-semibold text-foreground">Tech Hub Electronics</h3>
-                    <p className="text-sm text-muted-foreground">Advanced electronics inventory</p>
+                <div className="space-y-6">
+                  <div className="text-center space-y-4">
+                    <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto">
+                      <Zap className="h-8 w-8 text-yellow-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">Tech Hub Electronics</h3>
+                      <p className="text-purple-200">Advanced electronics inventory</p>
+                    </div>
                   </div>
 
-                  <div className="bg-muted p-4 rounded-lg space-y-2">
-                    <div className="text-sm">
-                      <strong>Email:</strong> electronics@store.com
+                  <div className="bg-white/10 p-4 rounded-lg space-y-2">
+                    <div className="text-purple-200 text-sm">
+                      <strong className="text-white">Email:</strong> electronics@store.com
                     </div>
-                    <div className="text-sm">
-                      <strong>Password:</strong> password123
+                    <div className="text-purple-200 text-sm">
+                      <strong className="text-white">Password:</strong> password123
                     </div>
                   </div>
 
                   {error && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="bg-red-500/20 border-red-500/30 text-white">
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
 
                   <Button
-                    className="w-full"
+                    className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200"
                     onClick={async () => {
                       setIsLoading(true);
                       setError('');
@@ -246,7 +270,7 @@ export default function LoginPage() {
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         Signing in...
                       </>
                     ) : (
@@ -258,30 +282,34 @@ export default function LoginPage() {
 
               {/* Clothing Store Demo */}
               <TabsContent value="clothing">
-                <div className="mt-4 space-y-4">
-                  <div className="text-center space-y-2">
-                    <Shirt className="h-12 w-12 mx-auto text-pink-600" />
-                    <h3 className="text-lg font-semibold text-foreground">Fashion Hub</h3>
-                    <p className="text-sm text-muted-foreground">Fashion retail showcase</p>
+                <div className="space-y-6">
+                  <div className="text-center space-y-4">
+                    <div className="w-16 h-16 bg-pink-500/20 rounded-full flex items-center justify-center mx-auto">
+                      <Shirt className="h-8 w-8 text-pink-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">Fashion Hub</h3>
+                      <p className="text-purple-200">Fashion retail showcase</p>
+                    </div>
                   </div>
 
-                  <div className="bg-muted p-4 rounded-lg space-y-2">
-                    <div className="text-sm">
-                      <strong>Email:</strong> clothing@store.com
+                  <div className="bg-white/10 p-4 rounded-lg space-y-2">
+                    <div className="text-purple-200 text-sm">
+                      <strong className="text-white">Email:</strong> clothing@store.com
                     </div>
-                    <div className="text-sm">
-                      <strong>Password:</strong> password123
+                    <div className="text-purple-200 text-sm">
+                      <strong className="text-white">Password:</strong> password123
                     </div>
                   </div>
 
                   {error && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="bg-red-500/20 border-red-500/30 text-white">
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
 
                   <Button
-                    className="w-full"
+                    className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200"
                     onClick={async () => {
                       setIsLoading(true);
                       setError('');
@@ -304,7 +332,7 @@ export default function LoginPage() {
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         Signing in...
                       </>
                     ) : (
@@ -314,8 +342,17 @@ export default function LoginPage() {
                 </div>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Right side - Illustration placeholder */}
+      <div className="hidden lg:flex flex-1 items-center justify-center p-8 relative z-10">
+        <div className="w-full h-full flex items-center justify-center text-white/50">
+          <div className="text-center max-w-md">
+            
+          </div>
+        </div>
       </div>
     </div>
   );

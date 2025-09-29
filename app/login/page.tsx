@@ -58,7 +58,7 @@ export default function LoginPage() {
       <div
         className="absolute inset-0 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900"
         style={{
-          backgroundImage: `url('/loginbg.svg')`,
+          backgroundImage: `url('/loginbg.png')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundBlendMode: 'overlay'
